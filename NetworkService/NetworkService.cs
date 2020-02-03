@@ -21,29 +21,25 @@ namespace IngameScript
 {
     partial class Program
     {
-        public class Role
+        public class NetworkService
         {
-            protected Drone drone;
-            protected int State;
+            private Program Program;
+            private IMyRemoteControl Remote;
 
-            public Role()
+            public NetworkService(Program program, IMyRemoteControl remote)
             {
-
+                this.Program = program;
+                this.Remote = remote;
             }
 
-            public virtual void Perform()
+            public void BroadcastMessage(string channel, Message message)
             {
-                drone.Shutdown();
+                Program.IGC.SendBroadcastMessage(channel, message, TransmissionDistance.TransmissionDistanceMax);
             }
 
-            public override string ToString()
+            public void RegisterBroadcastListener(string channel, Delegate callback)
             {
-                return this.Name();
-            }
-
-            public virtual string Name()
-            {
-                return "Generic Role";
+                // Do something with the message
             }
         }
     }

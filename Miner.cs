@@ -23,9 +23,31 @@ namespace IngameScript
     {
         public class Miner : Role
         {
-            public Miner()
+            /* State Progression
+             * 0: requesting departure clearance
+             * 1: departing
+             * 2: flying to mining site
+             * 3: mining
+             * 4: requesting docking clearance
+             * 5: waiting for docking clearance
+             * 6: returning to drone controller
+             * 7: docking
+             * 8: shutting down
+             */
+            public Miner(Drone drone)
             {
-                // instantiate and configure state machine
+                this.drone = drone;
+                this.State = 4;
+            }
+
+            public override void Perform()
+            {
+                switch (this.State)
+                {
+                    case 4:
+                        this.drone.RequestDockingClearance();
+                        break;
+                }
             }
 
             public override string Name()

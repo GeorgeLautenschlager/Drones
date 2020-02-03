@@ -26,14 +26,18 @@ namespace IngameScript
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
 
-            Role[] roles = new Role[1]{ new Miner() };
+            List<IMyRemoteControl> remotes = new List<IMyRemoteControl>();
+            GridTerminalSystem.GetBlocksOfType<IMyRemoteControl>(remotes, rc => rc.CustomName == "Drone Brain" && rc.IsSameConstructAs(Me));
+            if (remotes == null || remotes.Count == 0)
+                throw new Exception("Drone has no Brain!");
+            IMyRemoteControl remote = remotes.First();
+            
+            ManeuverService maneuverService = new ManeuverService(this, remote, 10);
+            NetworkService networkService = new NetworkService(this, remote);
 
-            string[] roleNames = new string[roles.Length];
-            roleNames = roles.Select(role => role.ToString()).ToArray();
-
-            Echo($"Building drone with roles: {String.Join(",", roleNames)}");
-
-            drone = new Drone(this, roles);
+            drone = new Drone(this, maneuverService, networkService);
+            Role[] roles = new Role[1] { new Miner(drone) };
+            drone.SetRoles(roles);
         }
 
         public void Save()
@@ -48,7 +52,6 @@ namespace IngameScript
 
         public void Main(string argument, UpdateType updateSource)
         {
-            Echo("Are you alive?");
             drone.Act();
         }
     }

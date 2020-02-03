@@ -21,29 +21,18 @@ namespace IngameScript
 {
     partial class Program
     {
-        public class Role
+        public class BroadcastMessage : Message
         {
-            protected Drone drone;
-            protected int State;
+            public string Data { get; set; } = "";
 
-            public Role()
+            public override void Load(Dictionary<string, Field> fields)
             {
-
+                this.Data = fields["data"].GetString();
             }
 
-            public virtual void Perform()
+            public override void Save()
             {
-                drone.Shutdown();
-            }
-
-            public override string ToString()
-            {
-                return this.Name();
-            }
-
-            public virtual string Name()
-            {
-                return "Generic Role";
+                fields["data"] = new Field(Data);
             }
         }
     }

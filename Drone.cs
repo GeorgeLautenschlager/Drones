@@ -27,30 +27,51 @@ namespace IngameScript
         */
         public class Drone
         {
-            private Program program;
+            private Program Program;
             private Role[] roles;
+            private ManeuverService ManeuverService;
+            private NetworkService NetworkService;
 
-            public Drone(Program program, Role[] roles)
+            public Drone(Program program, ManeuverService maneuverService, NetworkService networkService)
             {
-                this.program = program;
+                this.Program = program;
                 this.roles = roles;
+                this.ManeuverService = maneuverService;
+                this.NetworkService = networkService;
 
                 string[] roleNames = new string[roles.Length];
                 roleNames = roles.Select(role => role.ToString()).ToArray();
 
-
                 program.Echo($"Initializing drone with roles: {String.Join(",", roleNames)}");
+            }
+
+            public void SetRoles(Role[] roles)
+            {
+                this.roles = roles;
             }
 
             public void Act()
             {
-                Log("Cogito Ergo Sum");
-                // ask my roles what to do
+                // TODO: support multiple roles
+                this.roles.First().Perform();
+
+                //Log("Going to mining site");
+                //maneuverService.GoToPosition(new Vector3D(141232.17, -72348.93, -61066.09));
+            }
+
+            public void RequestDockingClearance()
+            {
+                Program.Echo("shutting down");
+            }
+
+            public void Shutdown()
+            {
+                Program.Echo("shutting down");
             }
 
             private void Log(string text)
             {
-                this.program.Echo(text);
+                this.Program.Echo(text);
             }
         }
     }

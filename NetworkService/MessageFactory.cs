@@ -21,29 +21,22 @@ namespace IngameScript
 {
     partial class Program
     {
-        public class Role
+        public class MessageFactory
         {
-            protected Drone drone;
-            protected int State;
-
-            public Role()
+            public static Message Get(string name, string data)
             {
+                var type = name.ToLower().Trim();
+                if (type == "broadcast")
+                    return Serializer.DeSerialize<BroadcastMessage>(data);
+                else if (type == "" || type == "message")
+                    return Serializer.DeSerialize<Message>(data);
 
+                return null;
             }
 
-            public virtual void Perform()
+            public static T Get<T>(string data) where T : Message, new()
             {
-                drone.Shutdown();
-            }
-
-            public override string ToString()
-            {
-                return this.Name();
-            }
-
-            public virtual string Name()
-            {
-                return "Generic Role";
+                return Serializer.DeSerialize<T>(data);
             }
         }
     }
