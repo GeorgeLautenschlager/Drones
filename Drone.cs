@@ -27,15 +27,14 @@ namespace IngameScript
         */
         public class Drone
         {
-            private Program Program;
-            private Role[] roles;
-            private ManeuverService ManeuverService;
-            private NetworkService NetworkService;
+            public Program Program;
+            public Role[] roles;
+            public ManeuverService ManeuverService;
+            public NetworkService NetworkService;
 
             public Drone(Program program, ManeuverService maneuverService, NetworkService networkService)
             {
                 this.Program = program;
-                this.roles = roles;
                 this.ManeuverService = maneuverService;
                 this.NetworkService = networkService;
 
@@ -59,9 +58,9 @@ namespace IngameScript
                 //maneuverService.GoToPosition(new Vector3D(141232.17, -72348.93, -61066.09));
             }
 
-            public void RequestDockingClearance()
+            public void ListenToChannel(string channel)
             {
-                Program.Echo("shutting down");
+                NetworkService.RegisterBroadcastListener(channel);
             }
 
             public void Shutdown()

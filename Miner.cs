@@ -23,7 +23,8 @@ namespace IngameScript
     {
         public class Miner : Role
         {
-            /* State Progression
+            /* 
+             * Miners are simple automatons and follow this state progression:
              * 0: requesting departure clearance
              * 1: departing
              * 2: flying to mining site
@@ -36,7 +37,7 @@ namespace IngameScript
              */
             public Miner(Drone drone)
             {
-                this.drone = drone;
+                this.Drone = drone;
                 this.State = 4;
             }
 
@@ -45,7 +46,18 @@ namespace IngameScript
                 switch (this.State)
                 {
                     case 4:
-                        this.drone.RequestDockingClearance();
+                        Behaviour.RequestDockingClearance(Drone);
+                        break;
+                    case 5:
+                        //Waiting for docking clearance from controller
+                        break;
+                    case 6:
+                        //Use docking path from the last state
+                        Behaviour.FlyToCoordinates(DockingPath);
+                        break;
+                    case 7:
+                        //perform docking
+                        Behaviour.Dock(ConnectorPosition, ConnectorOrientation);
                         break;
                 }
             }

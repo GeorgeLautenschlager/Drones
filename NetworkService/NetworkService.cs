@@ -32,14 +32,33 @@ namespace IngameScript
                 this.Remote = remote;
             }
 
-            public void BroadcastMessage(string channel, Message message)
+            public void BroadcastMessage(string channel, BroadcastMessage message)
             {
+                Program.Echo($"Sending Message: {message.Action}");
                 Program.IGC.SendBroadcastMessage(channel, message, TransmissionDistance.TransmissionDistanceMax);
             }
 
-            public void RegisterBroadcastListener(string channel, Delegate callback)
+            public BroadcastMessage GetNextBroadcaseMesage(string channel)
             {
-                // Do something with the message
+                //deserialize message and return it
+                List<IMyBroadcastListener> listeners = new List<IMyBroadcastListener>();
+                Program.IGC.GetBroadcastListeners(listeners);
+
+                if (listeners[0].HasPendingMessage)
+                {
+                    MyIGCMessage message = new MyIGCMessage();
+                    message = listeners[0].AcceptMessage();
+
+                    BroadcastMessage deserializedMessage = MessageFactory.Get<BroadcastMessage>(message.Data.ToString());
+                    Program.Echo($"Message received: {deserializedMessage.Action}");
+                }
+
+                return new BroadcastMessage();
+            }
+
+            public void RegisterBroadcastListener(string channel)
+            {
+                Program.IGC.RegisterBroadcastListener(channel);
             }
         }
     }

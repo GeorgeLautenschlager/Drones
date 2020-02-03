@@ -21,29 +21,16 @@ namespace IngameScript
 {
     partial class Program
     {
-        public class Role
+        public class Behaviour
         {
-            protected Drone Drone;
-            protected int State;
-
-            public Role()
+            public static bool RequestDockingClearance(Drone drone)
             {
+                bool result = false;
 
-            }
+                BroadcastMessage message = new BroadcastMessage
+                drone.BroadcastMessage(message)
 
-            public virtual void Perform()
-            {
-                drone.Shutdown();
-            }
-
-            public override string ToString()
-            {
-                return this.Name();
-            }
-
-            public virtual string Name()
-            {
-                return "Generic Role";
+                return result;
             }
         }
     }

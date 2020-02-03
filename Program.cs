@@ -36,6 +36,7 @@ namespace IngameScript
             NetworkService networkService = new NetworkService(this, remote);
 
             drone = new Drone(this, maneuverService, networkService);
+            //TODO: pull roles from Custom Data
             Role[] roles = new Role[1] { new Miner(drone) };
             drone.SetRoles(roles);
         }
