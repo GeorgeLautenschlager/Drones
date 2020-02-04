@@ -21,10 +21,12 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
+        MyCommandLine _commandLine = new MyCommandLine();
         Drone drone;
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
+            handleCallbacks();
 
             List<IMyRemoteControl> remotes = new List<IMyRemoteControl>();
             GridTerminalSystem.GetBlocksOfType<IMyRemoteControl>(remotes, rc => rc.CustomName == "Drone Brain" && rc.IsSameConstructAs(Me));
@@ -36,9 +38,42 @@ namespace IngameScript
             NetworkService networkService = new NetworkService(this, remote);
 
             drone = new Drone(this, maneuverService, networkService);
-            //TODO: pull roles from Custom Data
-            Role[] roles = new Role[1] { new Miner(drone) };
+
+            //TODO: handle multiple roles
+            string roleString = Me.CustomData as string;
+            Role role = null;
+
+            if (roleString == "miner")
+            {
+                role = new Miner(drone);
+            } else if (roleString == "drone controller")
+            {
+                role = new DroneController(drone);
+            }
+
+            Role[] roles = new Role[1] { role };
             drone.SetRoles(roles);
+        }
+
+        public void handleCallbacks()
+        {
+            if (_commandLine.ArgumentCount <= 0)
+                return;
+
+            string callback = _commandLine.Argument(0);
+
+            //TODO: this needs to be waaaaaay more general, obviously
+            switch (callback)
+            {
+                case "Requesting Docking Clearance":
+                    DroneController dc = this.drone.roles[0] as DroneController;
+                    dc.ProcessDockingRequest();
+                    break;
+                case "Docking Request Granted":
+                    Miner m = this.drone.roles[0] as Miner;
+                    m.AcceptDockingClearance();
+                    break;
+            }
         }
 
         public void Save()

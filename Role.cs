@@ -23,6 +23,7 @@ namespace IngameScript
     {
         public class Role
         {
+            protected const string DockingRequestChannel = "docking_requests";
             protected Drone Drone;
             protected int State;
 

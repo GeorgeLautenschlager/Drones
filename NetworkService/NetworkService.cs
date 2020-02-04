@@ -32,33 +32,35 @@ namespace IngameScript
                 this.Remote = remote;
             }
 
-            public void BroadcastMessage(string channel, BroadcastMessage message)
+            public void BroadcastMessage(string channel, string message)
             {
-                Program.Echo($"Sending Message: {message.Action}");
+                Program.Echo($"Sending Message: {message}");
                 Program.IGC.SendBroadcastMessage(channel, message, TransmissionDistance.TransmissionDistanceMax);
-            }
-
-            public BroadcastMessage GetNextBroadcaseMesage(string channel)
-            {
-                //deserialize message and return it
-                List<IMyBroadcastListener> listeners = new List<IMyBroadcastListener>();
-                Program.IGC.GetBroadcastListeners(listeners);
-
-                if (listeners[0].HasPendingMessage)
-                {
-                    MyIGCMessage message = new MyIGCMessage();
-                    message = listeners[0].AcceptMessage();
-
-                    BroadcastMessage deserializedMessage = MessageFactory.Get<BroadcastMessage>(message.Data.ToString());
-                    Program.Echo($"Message received: {deserializedMessage.Action}");
-                }
-
-                return new BroadcastMessage();
             }
 
             public void RegisterBroadcastListener(string channel)
             {
                 Program.IGC.RegisterBroadcastListener(channel);
+            }
+
+            public void RegisterCallBack(string channel)
+            {
+               this.GetBroadcastListenerForChannel(channel).SetMessageCallback(channel);
+            }
+
+            public IMyBroadcastListener GetBroadcastListenerForChannel(string channel)
+            {
+                List<IMyBroadcastListener> listeners = new List<IMyBroadcastListener>();
+                Program.IGC.GetBroadcastListeners(listeners, listener => listener.Tag == channel);
+
+                if (listeners.Count != 1)
+                {
+                    throw new Exception($"There must be exactly one listener on channel {channel} to register a callback!");
+                }
+                else
+                {
+                    return listeners.First();
+                }
             }
         }
     }

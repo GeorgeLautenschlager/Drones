@@ -29,36 +29,37 @@ namespace IngameScript
             * Drone controllers are more complex. They're more reactive because they have to make decisions based
             * on the needs of their drones.
             */
-            public DroneController(Drone drone, string channel)
+            public DroneController(Drone drone)
             {
                 this.Drone = drone;
-                this.Channel = channel;
-                this.Drone.ListenToChannel(channel);
+                this.Drone.ListenToChannel(DockingRequestChannel);
             }
 
             public override void Perform()
             {
-                // Check if your drones need anything
-                BroadcastMessage message = this.Drone.NetworkService.GetNextBroadcaseMesage(this.Channel);
+                //For now Drone controllers just sit and wait for a message from a drone.
+            }
 
-                switch (message.Action)
+            public void ProcessDockingRequest()
+            {
+                //TODO: what if there are multiple docking requests?
+                MyIGCMessage message = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel).AcceptMessage();
+
+                IMyShipConnector dockingPort = this.Drone.Program.GridTerminalSystem.GetBlockWithName("Docking Port 1") as IMyShipConnector;
+
+                if (dockingPort == null)
                 {
-                    case "requesting docking clearance":
-                        IMyShipConnector dockingPort = Drone.Program.GridTerminalSystem.GetBlockWithName("Docking Port 1") as IMyShipConnector;
+                    throw new Exception("Docking Port 1 not found.");
+                }
+                else
+                {
+                    //TODO: should I use the maneuver service for this?
+                    Vector3D connectorForward = dockingPort.WorldMatrix.Forward;
+                    List<Vector3D> dockingPath = new List<Vector3D> { (dockingPort.GetPosition() + 10 * connectorForward), dockingPort.GetPosition() };
 
-                        if (dockingPort == null)
-                        {
-                            throw new Exception("Docking Port 1 not found.");
-                        } else
-                        {
-                            Vector3D connectorForward = dockingPort.WorldMatrix.Forward;
-                            List<Vector3D> dockingPath = new List<Vector3D> { (dockingPort.GetPosition() + 10 * connectorForward), dockingPort.GetPosition() };
-
-                            SerializableVector3D
-
-                            Drone.NetworkService.BroadcastMessage("docking clearance ganted", Serializer.Serialize(dockingPath));
-                        }
-                        break;
+                    //TODO: serialize the dockingPath in a more general way.
+                    //TODO: include orientation in the message
+                    this.Drone.NetworkService.BroadcastMessage(DockingRequestChannel, $"{dockingPath[0].ToString()},{dockingPath[1].ToString()},{dockingPort.WorldMatrix.Backward}");
                 }
             }
 

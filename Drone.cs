@@ -58,6 +58,11 @@ namespace IngameScript
                 //maneuverService.GoToPosition(new Vector3D(141232.17, -72348.93, -61066.09));
             }
 
+            public void FlyToCoordinates(Vector3D position)
+            {
+                ManeuverService.GoToPosition(position);
+            }
+
             public void ListenToChannel(string channel)
             {
                 NetworkService.RegisterBroadcastListener(channel);
@@ -72,6 +77,7 @@ namespace IngameScript
             {
                 this.Program.Echo(text);
             }
+
         }
     }
 }

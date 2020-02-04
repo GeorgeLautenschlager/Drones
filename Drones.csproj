@@ -38,15 +38,8 @@
   <Import Project="MDK/MDK.options.props" />
   <Import Project="MDK/MDK.paths.props" Condition="exists('MDK/MDK.paths.props')" />
   <ItemGroup>
-    <Compile Include="Behaviour.cs" />
     <Compile Include="DroneController.cs" />
-    <Compile Include="NetworkService\BroadcastMessage.cs" />
-    <Compile Include="NetworkService\Message.cs" />
-    <Compile Include="NetworkService\MessageFactory.cs" />
     <Compile Include="NetworkService\NetworkService.cs" />
-    <Compile Include="Serialization\Serializer.cs" />
-    <Compile Include="Serialization\Serializable.cs" />
-    <Compile Include="Serialization\Field.cs" />
     <Compile Include="VectorHelper.cs" />
     <Compile Include="PID.cs" />
     <Compile Include="ManeuverService.cs" />

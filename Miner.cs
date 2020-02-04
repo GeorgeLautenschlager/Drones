@@ -35,6 +35,10 @@ namespace IngameScript
              * 7: docking
              * 8: shutting down
              */
+
+            private Vector3D[] dockingPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
+            private Vector3D dockingConnectorOrientation;
+
             public Miner(Drone drone)
             {
                 this.Drone = drone;
@@ -46,20 +50,32 @@ namespace IngameScript
                 switch (this.State)
                 {
                     case 4:
-                        Behaviour.RequestDockingClearance(Drone);
+                        Drone.NetworkService.BroadcastMessage(DockingRequestChannel, "Requesting Docking Clearance");
                         break;
                     case 5:
                         //Waiting for docking clearance from controller
                         break;
                     case 6:
                         //Use docking path from the last state
-                        Behaviour.FlyToCoordinates(DockingPath);
+                        Drone.FlyToCoordinates(dockingPath[0]);
                         break;
                     case 7:
                         //perform docking
-                        Behaviour.Dock(ConnectorPosition, ConnectorOrientation);
+                        Drone.Dock(dockingPath[1], ConnectorOrientation);
                         break;
                 }
+            }
+
+            public void AcceptDockingClearance()
+            {
+                //TODO: what if there are multiple docking requests?
+                MyIGCMessage message = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel).AcceptMessage();
+
+                //TODO: parse out orientation as the third string
+                string[] vectorStrings = message.Data.ToString().Split(',');
+                Vector3D.TryParse(vectorStrings[0], out dockingPath[0]);
+                Vector3D.TryParse(vectorStrings[1], out dockingPath[1]);
+                Vector3D.TryParse(vectorStrings[2], out dockingConnectorOrientation);
             }
 
             public override string Name()
