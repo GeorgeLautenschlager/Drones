@@ -26,7 +26,6 @@ namespace IngameScript
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
-            handleCallbacks();
 
             List<IMyRemoteControl> remotes = new List<IMyRemoteControl>();
             GridTerminalSystem.GetBlocksOfType<IMyRemoteControl>(remotes, rc => rc.CustomName == "Drone Brain" && rc.IsSameConstructAs(Me));
@@ -59,29 +58,6 @@ namespace IngameScript
             drone.SetRoles(roles);
         }
 
-        public void handleCallbacks()
-        {
-            if (_commandLine.ArgumentCount <= 0)
-                return;
-
-            string callback = _commandLine.Argument(0);
-
-            //TODO: this needs to be waaaaaay more general, obviously
-            switch (callback)
-            {
-                case "Requesting Docking Clearance":
-                    Echo("Responding to docking request");
-                    DroneController dc = this.drone.roles[0] as DroneController;
-                    dc.ProcessDockingRequest();
-                    break;
-                case "Docking Request Granted":
-                    Echo("Docking clearance received.");
-                    Miner m = this.drone.roles[0] as Miner;
-                    m.AcceptDockingClearance();
-                    break;
-            }
-        }
-
         public void Save()
         {
             // Called when the program needs to save its state. Use
@@ -94,7 +70,32 @@ namespace IngameScript
 
         public void Main(string argument, UpdateType updateSource)
         {
+            Echo($"{DateTime.Now.ToString()}");
+            Echo("Callbacks First");
+
+            handleCallback(argument);
+
+            Echo("Now drone stuff");
             drone.Act();
+        }
+
+        public void handleCallback(string callback)
+        {
+            Echo($"Processing callback: {callback}");
+            //TODO: this needs to be waaaaaay more general, obviously
+            switch (callback)
+            {
+                case "docking_request_pending":
+                    Echo("Responding to docking request");
+                    DroneController dc = this.drone.roles[0] as DroneController;
+                    dc.ProcessDockingRequest();
+                    break;
+                case "docking_request_granted":
+                    Echo("Docking clearance received.");
+                    Miner m = this.drone.roles[0] as Miner;
+                    m.AcceptDockingClearance();
+                    break;
+            }
         }
     }
 }

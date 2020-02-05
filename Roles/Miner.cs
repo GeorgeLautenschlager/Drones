@@ -43,11 +43,13 @@ namespace IngameScript
             {
                 this.Drone = drone;
                 this.State = 4;
+                this.Drone.ListenToChannel(DockingRequestChannel);
+                this.Drone.NetworkService.RegisterCallback(DockingRequestChannel, "docking_request_granted");
             }
 
             public override void Perform()
             {
-                Drone.Program.Echo("Miner: performing role");
+                Drone.Program.Echo($"Miner: performing role, state: {this.State}");
 
                 switch (this.State)
                 {
@@ -55,7 +57,7 @@ namespace IngameScript
                         // Get a path to following as well as the location
                         Drone.Program.Echo("Sending docking request");
                         Drone.NetworkService.BroadcastMessage(DockingRequestChannel, "Requesting Docking Clearance");
-                        this.State = 5;
+                        //this.State = 5;
                         break;
                     case 5:
                         //Waiting for docking clearance from controller
@@ -75,9 +77,22 @@ namespace IngameScript
             //TODO: this is too general to live in the Miner role. It should be moved to Drone, or maybe Role
             public void AcceptDockingClearance()
             {
-                MyIGCMessage message = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel).AcceptMessage();
+                Drone.Program.Echo("Accepting Docking Request");
+                IMyBroadcastListener listener = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel);
+
+                if (listener == null)
+                    throw new Exception("No listener found");
+
+                MyIGCMessage message = listener.AcceptMessage();
+                Drone.Program.Echo("Preparing Docking coordinates");
+
+                if (message.Data == null)
+                    throw new Exception("No message");
+
+                Drone.Program.Echo($"{message.Data.ToString()}");
 
                 string[] vectorStrings = message.Data.ToString().Split(',');
+                Drone.Program.Echo("Vectors Parsed");
                 Vector3D.TryParse(vectorStrings[0], out dockingConnectorOrientation);
                 Vector3D.TryParse(vectorStrings[1], out approachPath[0]);
                 Vector3D.TryParse(vectorStrings[2], out approachPath[1]);

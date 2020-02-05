@@ -33,17 +33,45 @@ namespace IngameScript
             {
                 this.Drone = drone;
                 this.Drone.ListenToChannel(DockingRequestChannel);
+                this.Drone.NetworkService.RegisterCallback(DockingRequestChannel, "docking_request_pending");
             }
 
             public override void Perform()
             {
+                Drone.Program.Echo("Drone Controller: Perform");
+
+                IMyBroadcastListener listener = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel);
+
+                if (listener.HasPendingMessage)
+                {
+                    MyIGCMessage message = listener.AcceptMessage();
+                    Drone.Program.Echo(message.Data.ToString());
+
+                }
+                else
+                {
+                    Drone.Program.Echo($"No Messages on channel {listener.Tag}");
+                }
+
                 //For now Drone controllers just sit and wait for a message from a drone.
             }
 
             public void ProcessDockingRequest()
             {
+                IMyTextPanel callbackLogger = this.Drone.Program.GridTerminalSystem.GetBlockWithName("callback_logger") as IMyTextPanel;
+
+                if (callbackLogger == null)
+                    throw new Exception("No screen found");
+
+                callbackLogger.WriteText($"Logging: {DateTime.Now}");
+
                 //TODO: what if there are multiple docking requests?
                 MyIGCMessage message = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel).AcceptMessage();
+
+                if (message.Data == null)
+                    throw new Exception("No Message");
+
+                callbackLogger.WriteText(message.Data.ToString());
 
                 IMyShipConnector dockingPort = this.Drone.Program.GridTerminalSystem.GetBlockWithName("Docking Port 1") as IMyShipConnector;
 

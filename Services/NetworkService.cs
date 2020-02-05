@@ -34,7 +34,7 @@ namespace IngameScript
 
             public void BroadcastMessage(string channel, string message)
             {
-                Program.Echo($"Sending Message: {message}");
+                Program.Echo($"Sending Message: {message} to channel {channel} at {DateTime.Now.ToString()}");
                 Program.IGC.SendBroadcastMessage(channel, message, TransmissionDistance.TransmissionDistanceMax);
             }
 
@@ -43,10 +43,10 @@ namespace IngameScript
                 Program.IGC.RegisterBroadcastListener(channel);
             }
 
-            public void RegisterCallback(string channel)
+            public void RegisterCallback(string channel, string callback)
             {
                 Program.Echo($"Listening on channel: {channel}");
-                this.GetBroadcastListenerForChannel(channel).SetMessageCallback(channel);
+                this.GetBroadcastListenerForChannel(channel).SetMessageCallback(callback);
             }
 
             public IMyBroadcastListener GetBroadcastListenerForChannel(string channel)

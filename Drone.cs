@@ -67,7 +67,6 @@ namespace IngameScript
             public void ListenToChannel(string channel)
             {
                 NetworkService.RegisterBroadcastListener(channel);
-                NetworkService.RegisterCallback(channel);
             }
 
             public void Shutdown()
