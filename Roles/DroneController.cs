@@ -53,19 +53,18 @@ namespace IngameScript
                 }
                 else
                 {
-                    //TODO: should I use the maneuver service for this?
-                    Vector3D connectorForward = dockingPort.WorldMatrix.Forward;
-                    List<Vector3D> dockingPath = new List<Vector3D> { (dockingPort.GetPosition() + 10 * connectorForward), dockingPort.GetPosition() };
+                    List<Vector3D> dockingPath = new List<Vector3D> { (dockingPort.GetPosition() + 10 * dockingPort.WorldMatrix.Forward), dockingPort.GetPosition() };
 
-                    //TODO: serialize the dockingPath in a more general way.
-                    //TODO: include orientation in the message
-                    this.Drone.NetworkService.BroadcastMessage(DockingRequestChannel, $"{dockingPath[0].ToString()},{dockingPath[1].ToString()},{dockingPort.WorldMatrix.Backward}");
+                    this.Drone.NetworkService.BroadcastMessage(
+                        DockingRequestChannel, 
+                        $"{dockingPort.WorldMatrix.Backward},{dockingPath[0].ToString()},{dockingPath[1].ToString()}"
+                    );
                 }
             }
 
             public override string Name()
             {
-                return "Miner";
+                return "DroneController";
             }
         }
     }

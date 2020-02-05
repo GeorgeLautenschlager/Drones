@@ -43,9 +43,10 @@ namespace IngameScript
                 Program.IGC.RegisterBroadcastListener(channel);
             }
 
-            public void RegisterCallBack(string channel)
+            public void RegisterCallback(string channel)
             {
-               this.GetBroadcastListenerForChannel(channel).SetMessageCallback(channel);
+                Program.Echo($"Listening on channel: {channel}");
+                this.GetBroadcastListenerForChannel(channel).SetMessageCallback(channel);
             }
 
             public IMyBroadcastListener GetBroadcastListenerForChannel(string channel)
@@ -55,7 +56,7 @@ namespace IngameScript
 
                 if (listeners.Count != 1)
                 {
-                    throw new Exception($"There must be exactly one listener on channel {channel} to register a callback!");
+                    throw new Exception($"There must be exactly one listener on channel {channel}.");
                 }
                 else
                 {

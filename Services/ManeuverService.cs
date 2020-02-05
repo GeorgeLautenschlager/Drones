@@ -85,7 +85,10 @@ namespace IngameScript
                 gridRef().GetBlocksOfType<IMyThrust>(this.ThrustersAll);
 
                 if (this.ThrustersAll == null || this.ThrustersAll.Count == 0)
-                    throw new Exception("No Thrusters");
+                {
+                    Program.Echo("WARNING: No Thrusters");
+                    return;
+                }
 
                 // Init Dictionaries.
                 this.Thrusters = new Dictionary<Base6Directions.Direction, List<IMyThrust>>();

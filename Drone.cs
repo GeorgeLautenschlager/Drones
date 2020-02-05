@@ -37,25 +37,25 @@ namespace IngameScript
                 this.Program = program;
                 this.ManeuverService = maneuverService;
                 this.NetworkService = networkService;
-
-                string[] roleNames = new string[roles.Length];
-                roleNames = roles.Select(role => role.ToString()).ToArray();
-
-                program.Echo($"Initializing drone with roles: {String.Join(",", roleNames)}");
+                Program.Echo("Drone equipped");
             }
 
             public void SetRoles(Role[] roles)
             {
                 this.roles = roles;
+
+                string[] roleNames = new string[this.roles.Length];
+                roleNames = this.roles.Select(role => role.ToString()).ToArray();
+                Program.Echo($"Initializing drone with roles: {String.Join(",", roleNames)}");
             }
 
             public void Act()
             {
-                // TODO: support multiple roles
-                this.roles.First().Perform();
+                if (this.roles == null || this.roles.Length == 0)
+                    throw new Exception("No Roles assigned!");
 
-                //Log("Going to mining site");
-                //maneuverService.GoToPosition(new Vector3D(141232.17, -72348.93, -61066.09));
+                // TODO: support multiple roles
+                this.roles[0].Perform();
             }
 
             public void FlyToCoordinates(Vector3D position)
@@ -63,9 +63,11 @@ namespace IngameScript
                 ManeuverService.GoToPosition(position);
             }
 
+            //Set up a Broadcast listener and callback so this drone can respond to messages on the given channel.
             public void ListenToChannel(string channel)
             {
                 NetworkService.RegisterBroadcastListener(channel);
+                NetworkService.RegisterCallback(channel);
             }
 
             public void Shutdown()

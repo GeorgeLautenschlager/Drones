@@ -33,10 +33,10 @@ namespace IngameScript
             if (remotes == null || remotes.Count == 0)
                 throw new Exception("Drone has no Brain!");
             IMyRemoteControl remote = remotes.First();
-            
-            ManeuverService maneuverService = new ManeuverService(this, remote, 10);
-            NetworkService networkService = new NetworkService(this, remote);
 
+            NetworkService networkService = new NetworkService(this, remote);
+            ManeuverService maneuverService = new ManeuverService(this, remote, 5);
+            Echo("Services ready, building drone.");
             drone = new Drone(this, maneuverService, networkService);
 
             //TODO: handle multiple roles
@@ -45,9 +45,13 @@ namespace IngameScript
 
             if (roleString == "miner")
             {
+                Echo("Assigning Role: Miner");
                 role = new Miner(drone);
-            } else if (roleString == "drone controller")
+            }
+            
+            if (roleString == "drone controller")
             {
+                Echo("Assigning Role: Drone Controller");
                 role = new DroneController(drone);
             }
 
@@ -66,10 +70,12 @@ namespace IngameScript
             switch (callback)
             {
                 case "Requesting Docking Clearance":
+                    Echo("Responding to docking request");
                     DroneController dc = this.drone.roles[0] as DroneController;
                     dc.ProcessDockingRequest();
                     break;
                 case "Docking Request Granted":
+                    Echo("Docking clearance received.");
                     Miner m = this.drone.roles[0] as Miner;
                     m.AcceptDockingClearance();
                     break;

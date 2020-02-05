@@ -24,8 +24,21 @@ namespace IngameScript
         public class Role
         {
             protected const string DockingRequestChannel = "docking_requests";
-            protected Drone Drone;
+            private Drone drone;
             protected int State;
+
+            protected Drone Drone
+            {
+                get
+                {
+                    return drone;
+                }
+
+                set
+                {
+                    drone = value;
+                }
+            }
 
             public Role()
             {
@@ -34,7 +47,8 @@ namespace IngameScript
 
             public virtual void Perform()
             {
-                drone.Shutdown();
+                Drone.Program.Echo("No proper roles assigned. Shutting Down.");
+                Drone.Shutdown();
             }
 
             public override string ToString()
