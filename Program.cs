@@ -25,7 +25,7 @@ namespace IngameScript
         Drone drone;
         public Program()
         {
-            Runtime.UpdateFrequency = UpdateFrequency.Update100;
+            Runtime.UpdateFrequency = UpdateFrequency.Update1;
 
             List<IMyRemoteControl> remotes = new List<IMyRemoteControl>();
             GridTerminalSystem.GetBlocksOfType<IMyRemoteControl>(remotes, rc => rc.CustomName == "Drone Brain" && rc.IsSameConstructAs(Me));
@@ -34,7 +34,7 @@ namespace IngameScript
             IMyRemoteControl remote = remotes.First();
 
             NetworkService networkService = new NetworkService(this, remote);
-            ManeuverService maneuverService = new ManeuverService(this, remote, 5);
+            ManeuverService maneuverService = new ManeuverService(this, remote, 1);
             Echo("Services ready, building drone.");
             drone = new Drone(this, maneuverService, networkService);
 

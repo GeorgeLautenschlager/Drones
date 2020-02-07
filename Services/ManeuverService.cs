@@ -78,6 +78,109 @@ namespace IngameScript
                 return this.Program.GridTerminalSystem;
             }
 
+            // TODO: add an optional roll alignmentVector
+            public bool AlignTo(Vector3D alignmentVector, IMyTerminalBlock block)
+            {
+                // TODO: make these instance variables
+                var orientationAccuracy = 0.01;
+                var orientationCorrectionSpeedFactor = 0.1;
+
+                // Check angle.
+                if (VectorHelper.AngleBetween(alignmentVector, block.WorldMatrix.Forward) <= orientationAccuracy)
+                {
+                    DisableGyroOverride();
+                    return true;
+                }
+
+                double yawCorrectionAngle, pitchCorrectionAngle;
+                GetRotationAngles(
+                  alignmentVector,
+                  block.WorldMatrix.Forward,
+                  block.WorldMatrix.Left,
+                  block.WorldMatrix.Up,
+                  out yawCorrectionAngle,
+                  out pitchCorrectionAngle
+                );
+
+                var correctionFrequency = this.Program.Runtime.TimeSinceLastRun.TotalMilliseconds / 1000;
+
+                // Determine pitch and yaw speeds
+                double pitchSpeed, yawSpeed;
+                pitchSpeed = PitchPID.CorrectError(pitchCorrectionAngle, correctionFrequency) * orientationCorrectionSpeedFactor;
+                yawSpeed = YawPID.CorrectError(yawCorrectionAngle, correctionFrequency) * orientationCorrectionSpeedFactor;
+
+                SetGyroOverrides(pitchSpeed, yawSpeed, 0, Gyros, block.WorldMatrix);
+
+                return false;
+            }
+
+            private void SetGyroOverrides(double pitchSpeed, double yawSpeed, double rollSpeed, List<IMyGyro> gyros, MatrixD worldMatrix)
+            {
+                var bodyAlignmentVector = Vector3D.TransformNormal(new Vector3D(-pitchSpeed, yawSpeed, rollSpeed), worldMatrix);
+
+                foreach (IMyGyro gyro in gyros)
+                {
+                    Vector3 transformedRotationVec = Vector3D.TransformNormal(bodyAlignmentVector, Matrix.Transpose(gyro.WorldMatrix));
+
+                    var pitchOverride = transformedRotationVec.X;
+                    var yawOverride = transformedRotationVec.Y;
+                    var rollOverrid = transformedRotationVec.Z;
+
+                    gyro.Pitch = pitchOverride;
+                    gyro.Yaw = yawOverride;
+
+                    gyro.GyroOverride = true;
+                }
+            }
+
+            public bool FlyToPosition(Vector3D position, IMyTerminalBlock block)
+            {
+                if (DistanceTo(position) <= DistanceAccuracy)
+                {
+                    return true;
+                }
+
+                // Get the velocity in XYZ directions.
+                CalculateVelocity();
+                Vector3D velocityNorm = Vector3D.Normalize(VelocityVector);
+
+                // Distance of block in XYZ directions to target position.
+                var xyzDist = VectorHelper.GetXYZDistance(block, position);
+                var distX = Math.Abs(xyzDist.X);
+                var distY = Math.Abs(xyzDist.Y);
+                var distZ = Math.Abs(xyzDist.Z);
+
+                // Ship mass
+                var mass = Remote.CalculateShipMass().TotalMass;
+
+                // Up
+                if (xyzDist.Z > DistanceAccuracy)
+                    SetThrustDirect(Base6Directions.Direction.Up, VelocityVector.Length() * 1000, mass, distZ, velocityNorm);
+
+                // Down
+                else if (xyzDist.Z < DistanceAccuracy * -1)
+                    SetThrustDirect(Base6Directions.Direction.Down, VelocityVector.Length() * 1000, mass, distZ, velocityNorm);
+
+                // Left
+                if (xyzDist.X > DistanceAccuracy)
+                    SetThrustDirect(Base6Directions.Direction.Left, VelocityVector.Length() * 1000, mass, distX, velocityNorm);
+
+                // Right
+                else if (xyzDist.X < DistanceAccuracy * -1)
+                    SetThrustDirect(Base6Directions.Direction.Right, VelocityVector.Length() * 1000, mass, distX, velocityNorm);
+
+                // Forward
+                if (xyzDist.Y > DistanceAccuracy)
+                    SetThrustDirect(Base6Directions.Direction.Forward, VelocityVector.Length() * 1000, mass, distY, velocityNorm);
+
+                // Backward
+                else if (xyzDist.Y < DistanceAccuracy * -1)
+                    SetThrustDirect(Base6Directions.Direction.Backward, VelocityVector.Length() * 1000, mass, distY, velocityNorm);
+
+                return false;
+            }
+
+            #region Replace this
             private void InitThrusters()
             {
                 // Get Thrusters.
@@ -550,6 +653,8 @@ namespace IngameScript
                 if (Math.Abs(pitch) < eps && Math.Abs(yaw) < eps && v_target.Dot(v_front) < 0)
                     yaw = Math.PI;
             }
+
+            #endregion
         }
     }
 }

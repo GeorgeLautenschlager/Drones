@@ -81,7 +81,8 @@ namespace IngameScript
                 }
                 else
                 {
-                    List<Vector3D> dockingPath = new List<Vector3D> { (dockingPort.GetPosition() + 10 * dockingPort.WorldMatrix.Forward), dockingPort.GetPosition() };
+                    Vector3D approachPoint = Vector3D.Add(dockingPort.GetPosition(), Vector3D.Multiply(dockingPort.WorldMatrix.Forward, 50));
+                    List<Vector3D> dockingPath = new List<Vector3D> { approachPoint, dockingPort.GetPosition() };
 
                     this.Drone.NetworkService.BroadcastMessage(
                         DockingRequestChannel, 
