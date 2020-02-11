@@ -54,6 +54,11 @@ namespace IngameScript
                 role = new DroneController(drone);
             }
 
+            if (roleString == "tester")
+            {
+                role = new Tester(drone);
+            }
+
             Role[] roles = new Role[1] { role };
             drone.SetRoles(roles);
         }

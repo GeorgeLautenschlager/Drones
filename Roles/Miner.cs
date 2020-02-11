@@ -69,6 +69,9 @@ namespace IngameScript
                         //Drone.Program.Echo($"Moving to Approach position {dockingConnectorOrientation}, {ApproachPath[0]}, {ApproachPath[1]} {DateTime.Now.ToString()}");
                         //Drone.ManeuverService.GoToPosition(ApproachPath[0], DockingConnector, false, false);
                         Drone.FlyToCoordinates(ApproachPath[0]);
+
+                        //Maybe I just need to reinit the maneuver service when I pass a block? 
+
                         //this.State = 7;
                         break;
                     case 7:

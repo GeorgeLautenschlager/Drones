@@ -39,7 +39,7 @@ namespace IngameScript
             private Vector3D Pos;
             private PID PitchPID, YawPID, RollPID;
 
-            private double DistanceAccuracy; 
+            private double DistanceAccuracy;
             private const float MinAngleRad = 0.3f;
             private const double CTRL_COEFF = 0.2;
             private const int MinRemoteControlDistance = 200;
@@ -354,7 +354,7 @@ namespace IngameScript
             public void DisableThrustersOverride()
             {
                 foreach (var thrust in ThrustersAll)
-                    thrust.SetValueFloat("Override", 0f);
+                    thrust.ThrustOverride = 0;
             }
             public void Reset()
             {
@@ -499,6 +499,7 @@ namespace IngameScript
 
             private double CalculateStopDistance(double velocity, double acceleration)
             {
+                Program.Echo($"velocity * velocity / (2 * acceleration) = {velocity} * {velocity} / (2 * {acceleration})");
                 return Math.Abs(velocity * velocity / (2 * acceleration));
             }
 
@@ -509,19 +510,30 @@ namespace IngameScript
 
                 // Use the oposite thrusters to calculate the acc needed for breaking...
                 double acc = CalculateAcceleration(Thrusters[opositeDir], mass, velocityNorm);
-                double stopDist = CalculateStopDistance(velocity, acc);
-
+                double stopDist = 2; //CalculateStopDistance(velocity, acc);
+                Program.Echo($"stopping distance: {stopDist}");
                 if (double.IsNaN(stopDist))
                     stopDist = 0;
 
                 // Calculate the power percentage to use based on distance.
-                double powerPercent = MathHelper.Clamp(dist / 100, 0.3, 1) * 100;
+                double powerPercent = MathHelper.Clamp(dist / 200, 0.05, 1) * 100;
 
                 // Do we need to break?
-                if (stopDist * 3 >= dist)
+
+                string fdist = string.Format("{0:N2}", dist);
+                string fstopDist = string.Format("{0:N2}", stopDist * 3);
+                Program.Echo($"stopping distance: {fstopDist}");
+
+                if (stopDist * 10.0d >= dist)
+                {
+                    Program.Echo($"Coasting");
                     SetThrust(headingDir, 0);
+                }
                 else
+                {
+                    Program.Echo($"I wanna go fast: {powerPercent}");
                     SetThrust(headingDir, powerPercent);
+                }
             }
 
             private void SetThrust(Base6Directions.Direction dir, double percent)
@@ -556,7 +568,7 @@ namespace IngameScript
                 return myAcceleration;
             }
 
-            private bool GoToWithThrusters(Vector3D vPos, IMyTerminalBlock block = null)
+            public bool GoToWithThrusters(Vector3D vPos, IMyTerminalBlock block = null)
             {
                 // Set block to RC if nothing else is specfied.
                 if (block == null)
@@ -577,7 +589,7 @@ namespace IngameScript
                 double velZ = VelocityVector.Z * 1000;
 
                 // Distance of block in XYZ directions to target position.
-                var xyzDist = VectorHelper.GetXYZDistance(Remote, vPos);
+                var xyzDist = VectorHelper.GetXYZDistance(block, vPos);
                 var distX = Math.Abs(xyzDist.X);
                 var distY = Math.Abs(xyzDist.Y);
                 var distZ = Math.Abs(xyzDist.Z);
