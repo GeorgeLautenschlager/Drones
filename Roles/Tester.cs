@@ -29,7 +29,9 @@ namespace IngameScript
 
             IMyCockpit Cockpit;
             List<IMyTerminalBlock> Blocks = new List<IMyTerminalBlock>();
+            Vector3D originalPosition;
             Vector3D targetPosition;
+            private DateTime transitionTime;
 
             public Tester(Drone drone)
             {
@@ -37,7 +39,8 @@ namespace IngameScript
                 this.State = 0;
                 Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyCockpit>(Blocks);
                 Cockpit = Blocks.First() as IMyCockpit;
-                targetPosition = Cockpit.GetPosition() + 100 * Cockpit.WorldMatrix.Forward;
+                originalPosition = Cockpit.GetPosition();
+                targetPosition = originalPosition + 100 * Cockpit.WorldMatrix.Forward;
             }
 
             public override void Perform()
@@ -46,15 +49,26 @@ namespace IngameScript
                 switch (this.State)
                 {
                     case 0:
-                        Drone.Program.Echo("Moving");
+                        Drone.Program.Echo("Moving Forward");
                         if (this.Drone.ManeuverService.GoToWithThrusters(targetPosition, Cockpit))
                         {
-                            this.State = 0;
+                            this.State = 1;
+                            this.transitionTime = DateTime.Now;
                             this.Drone.ManeuverService.Reset();
                         }
                         break;
                     case 1:
-                        Drone.Program.Echo("Translation Complete");
+                        Drone.Program.Echo("Taking a break");
+                        if (this.transitionTime.AddSeconds(2) < DateTime.Now)
+                            this.State = 2;
+                        break;
+                    case 2:
+                        Drone.Program.Echo("Moving Back");
+                        if (this.Drone.ManeuverService.GoToWithThrusters(originalPosition, Cockpit))
+                        {
+                            this.State = 0;
+                            this.Drone.ManeuverService.Reset();
+                        }
                         break;
 
                 }

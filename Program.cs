@@ -34,7 +34,7 @@ namespace IngameScript
             IMyRemoteControl remote = remotes.First();
 
             NetworkService networkService = new NetworkService(this, remote);
-            ManeuverService maneuverService = new ManeuverService(this, remote, 1);
+            ManeuverService maneuverService = new ManeuverService(this, remote, 2.5);
             Echo("Services ready, building drone.");
             drone = new Drone(this, maneuverService, networkService);
 

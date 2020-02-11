@@ -574,8 +574,10 @@ namespace IngameScript
                 if (block == null)
                     block = Remote;
 
+                Program.Echo($"DistanceTo(vPos) <= DistanceAccuracy = {DistanceTo(vPos)} <= {DistanceAccuracy}");
                 if (DistanceTo(vPos) <= DistanceAccuracy)
                 {
+                    Program.Echo("Arrived at Destination.");
                     return true;
                 }
 
