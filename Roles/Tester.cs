@@ -60,14 +60,26 @@ namespace IngameScript
                     case 1:
                         Drone.Program.Echo("Taking a break");
                         if (this.transitionTime.AddSeconds(2) < DateTime.Now)
+                        {
                             this.State = 2;
+                            this.transitionTime = DateTime.Now;
+                        }
                         break;
                     case 2:
                         Drone.Program.Echo("Moving Back");
                         if (this.Drone.ManeuverService.GoToWithThrusters(originalPosition, Cockpit))
                         {
-                            this.State = 0;
+                            this.State = 3;
+                            this.transitionTime = DateTime.Now;
                             this.Drone.ManeuverService.Reset();
+                        }
+                        break;
+                    case 3:
+                        Drone.Program.Echo("Taking a break");
+                        if (this.transitionTime.AddSeconds(2) < DateTime.Now)
+                        {
+                            this.State = 0;
+                            this.transitionTime = DateTime.Now;
                         }
                         break;
 

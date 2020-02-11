@@ -521,7 +521,7 @@ namespace IngameScript
                 // Do we need to break?
 
                 string fdist = string.Format("{0:N2}", dist);
-                string fstopDist = string.Format("{0:N2}", stopDist * 3);
+                string fstopDist = string.Format("{0:N2}", stopDist * 10);
                 Program.Echo($"stopping distance: {fstopDist}");
 
                 if (stopDist * 10.0d >= dist)
