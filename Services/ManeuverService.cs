@@ -499,40 +499,39 @@ namespace IngameScript
 
             private double CalculateStopDistance(double velocity, double acceleration)
             {
-                Program.Echo($"velocity * velocity / (2 * acceleration) = {velocity} * {velocity} / (2 * {acceleration})");
-                return Math.Abs(velocity * velocity / (2 * acceleration));
+                //Program.Echo($"velocity: {velocity}, acceleration: {acceleration}");
+                return (velocity * velocity) / (2 * acceleration);
             }
 
-            private void SetThrustDirect(Base6Directions.Direction headingDir, double velocity, float mass, double dist, Vector3D velocityNorm)
+            private void SetThrustDirect(Base6Directions.Direction headingDir, double velocity, float mass, double distance, Vector3D velocityNorm)
             {
-                // Get oposite direction.
-                Base6Directions.Direction opositeDir = Base6Directions.GetOppositeDirection(headingDir);
+                Base6Directions.Direction oppositeDir = Base6Directions.GetOppositeDirection(headingDir);
 
-                // Use the oposite thrusters to calculate the acc needed for breaking...
-                double acc = CalculateAcceleration(Thrusters[opositeDir], mass, velocityNorm);
-                double stopDist = 2; //CalculateStopDistance(velocity, acc);
-                Program.Echo($"stopping distance: {stopDist}");
-                if (double.IsNaN(stopDist))
-                    stopDist = 0;
+                velocity = Remote.GetShipVelocities().LinearVelocity.X;
+                double acceleration = CalculateAcceleration(Thrusters[oppositeDir], mass);
+                double stopDistance = CalculateStopDistance(velocity, acceleration);
 
-                // Calculate the power percentage to use based on distance.
-                double powerPercent = MathHelper.Clamp(dist / 200, 0.05, 1) * 100;
+                Program.Echo($"stopping distance: {stopDistance}");
+                if (double.IsNaN(stopDistance))
+                    stopDistance = 0;
 
-                // Do we need to break?
+                double powerPercent = MathHelper.Clamp(distance / 500, 0.05, 1) * 100;
 
-                string fdist = string.Format("{0:N2}", dist);
-                string fstopDist = string.Format("{0:N2}", stopDist * 10);
-                Program.Echo($"stopping distance: {fstopDist}");
-
-                if (stopDist * 10.0d >= dist)
+                if (stopDistance > distance)
                 {
-                    Program.Echo($"Coasting");
-                    SetThrust(headingDir, 0);
+                    Program.Echo($"Too fast, increase backward thrust");
+                    SetThrust(oppositeDir, 100);
                 }
-                else
+                else if (stopDistance < distance)
                 {
                     Program.Echo($"I wanna go fast: {powerPercent}");
                     SetThrust(headingDir, powerPercent);
+                }
+                else
+                {
+                    Program.Echo($"Speed is good, coasting");
+                    SetThrust(headingDir, 0);
+                    SetThrust(oppositeDir, 0);
                 }
             }
 
@@ -547,25 +546,25 @@ namespace IngameScript
                     thruster.ThrustOverride = 0;
             }
 
-            private double CalculateAcceleration(List<IMyThrust> thrusters, float shipMass, Vector3D velocityNorm)
+            private double CalculateAcceleration(List<IMyThrust> thrusters, float mass)
             {
-                float maxThrust = 0;
-                foreach (var t in thrusters)
+                double maxThrust = 0;
+                foreach (var thruster in thrusters)
                 {
-                    if (!t.IsWorking)
+                    if (!thruster.IsWorking)
                         continue;
 
-                    Vector3D proj = VectorHelper.VectorProject(t.WorldMatrix.Forward, velocityNorm);
-                    double percentage = proj.Length();
-                    maxThrust += (float)(t.MaxThrust * percentage);
+                    maxThrust += thruster.MaxThrust;
                 }
 
-                double myAcceleration = (maxThrust / shipMass);
-                if (double.IsNaN(myAcceleration))
+                double acceleration = (maxThrust / mass);
+
+                if (double.IsNaN(acceleration))
                 {
-                    myAcceleration = 0;
+                    acceleration = 0;
                 }
-                return myAcceleration;
+
+                return acceleration;
             }
 
             public bool GoToWithThrusters(Vector3D vPos, IMyTerminalBlock block = null)
@@ -574,10 +573,8 @@ namespace IngameScript
                 if (block == null)
                     block = Remote;
 
-                Program.Echo($"DistanceTo(vPos) <= DistanceAccuracy = {DistanceTo(vPos)} <= {DistanceAccuracy}");
                 if (DistanceTo(vPos) <= DistanceAccuracy)
                 {
-                    Program.Echo("Arrived at Destination.");
                     return true;
                 }
 
