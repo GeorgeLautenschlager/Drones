@@ -52,6 +52,7 @@ namespace IngameScript
             public override void Perform()
             {
                 Drone.Program.Echo($"Miner: performing role, state: {this.State}");
+                IMyRemoteControl Remote = Drone.ManeuverService.Remote;
 
                 switch (this.State)
                 {
@@ -68,19 +69,81 @@ namespace IngameScript
                         //Use docking path from the last state
                         //Drone.Program.Echo($"Moving to Approach position {dockingConnectorOrientation}, {ApproachPath[0]}, {ApproachPath[1]} {DateTime.Now.ToString()}");
                         //Drone.ManeuverService.GoToPosition(ApproachPath[0], DockingConnector, false, false);
-                        Drone.FlyToCoordinates(ApproachPath[0]);
+                        //Drone.FlyToCoordinates(ApproachPath[0]);
 
                         //Maybe I just need to reinit the maneuver service when I pass a block? 
 
-                        //this.State = 7;
+                        // Autopilot
+                        //-set collision avoidance on and direction to remote forward
+                        //-flight mode one-way
+                        //- set waypoints, compensating for remote's offset from centre of gravity
+                        //- activate autopilot
+                        //- clear waypoints
+                        // if (Drone.ManeuverService.DistanceTo(ApproachPath[0]) <= 1)
+
+                        if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[0]) < 1)
+                        {
+                            this.State = 7;
+                        }
+                        else if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[0]) < 100)
+                        {
+                            Remote.SpeedLimit = 20;
+                        }
+                        else if (Remote.IsAutoPilotEnabled == false)
+                        {
+                            //Move to docking approach
+                            Remote.ClearWaypoints();
+                            Remote.SetCollisionAvoidance(true);
+                            Remote.FlightMode = FlightMode.OneWay;
+                            Remote.AddWaypoint(ApproachPath[0], "Docking Approach");
+                            Remote.SetAutoPilotEnabled(true);
+                        }
+
                         break;
                     case 7:
-                        //Aligning
+                        //Docking with the autopilot?
+                        Drone.Program.Echo($"Postion: {Remote.GetPosition().ToString()}");
+                        Drone.Program.Echo($"Target: {ApproachPath[1].ToString()}");
+                        Drone.Program.Echo($"Distance: {Vector3D.Distance(Remote.GetPosition(), ApproachPath[1])}");
+
+                        if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[1]) < 1)
+                        {
+                            //-activate connector and lock
+                            DockingConnector.Enabled = true;
+                            DockingConnector.Connect();
+                            //-shutdown(thrusters and gyros off, set batteries to recharge and fuel tanks to stockpile)
+                            //- set UpdateFrequency.Once
+
+                            this.State = 8;
+                        }
+                        else if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[1]) < 10)
+                        {
+                            Remote.SpeedLimit = 1;
+                        }
+                        else if (Remote.IsAutoPilotEnabled == false)
+                        {
+                            DockingConnector.Enabled = false;
+                            //-set direction to connector forward and align
+                            Remote.Direction = Base6Directions.Direction.Backward;
+                            //-clear waypoints and set collision avoidance off
+                            Remote.ClearWaypoints();
+                            //-set waypoint to connector coordinates
+                            Remote.FlightMode = FlightMode.OneWay;
+
+                            Remote.AddWaypoint(ApproachPath[1], "Docking Port");
+                            //-set docking mode
+                            Remote.SetCollisionAvoidance(false);
+                            Remote.SetDockingMode(true);
+                            //-move to waypoint(accounting for connector offset)
+                            Remote.SpeedLimit = 1;
+                            Remote.SetAutoPilotEnabled(true);
+                        }
                         //Drone.ManeuverService.AlignTo(dockingConnectorOrientation, DockingConnector);
                         //this.State = 8;
                         break;
                     case 8:
                         //Docking
+                        Drone.Program.Echo($"Docked apparently.");
                         //bool contact = Drone.ManeuverService.FlyToPosition(ApproachPath[1], DockingConnector);
                         //if (contact)
                         //{
@@ -128,6 +191,11 @@ namespace IngameScript
                     throw new Exception("No docking connector found!");
 
                 DockingConnector = connectors.First();
+
+                //Apply connector offset
+                //Vector3D offset = (Drone.ManeuverService.Remote.GetPosition() - DockingConnector.GetPosition());
+                //ApproachPath[0] = ApproachPath[0] + offset;
+                //ApproachPath[1] = ApproachPath[1] + offset;
 
                 // TODO: it would be nicer to have names rather than magic numbers.
                 this.State = 6;

@@ -26,7 +26,7 @@ namespace IngameScript
             #region Properties
 
             private Program Program;
-            private IMyRemoteControl Remote;
+            public IMyRemoteControl Remote;
             private List<IMyGyro> Gyros;
             private List<IMyThrust> ThrustersAll;
             private Dictionary<Base6Directions.Direction, List<IMyThrust>> Thrusters;
