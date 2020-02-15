@@ -80,21 +80,31 @@ namespace IngameScript
                         //- activate autopilot
                         //- clear waypoints
                         // if (Drone.ManeuverService.DistanceTo(ApproachPath[0]) <= 1)
+                        Drone.Program.Echo($"Docking Path");
+                        Drone.Program.Echo($"{ApproachPath[0]}");
+                        Drone.Program.Echo($"{ApproachPath[1]}");
+                        //break;
 
+                        Drone.Program.Echo($"Postion: {Remote.GetPosition().ToString()}");
+                        Drone.Program.Echo($"Target: {ApproachPath[0].ToString()}");
+                        Drone.Program.Echo($"Distance: {Vector3D.Distance(Remote.GetPosition(), ApproachPath[0])}");
+
+                        // Apply center of mass offset here
                         if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[0]) < 1)
                         {
                             this.State = 7;
                         }
-                        else if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[0]) < 100)
+                        else if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[0]) < 100 && Remote.SpeedLimit != 5)
                         {
-                            Remote.SpeedLimit = 20;
+                            Remote.SpeedLimit = 5;
                         }
                         else if (Remote.IsAutoPilotEnabled == false)
                         {
                             //Move to docking approach
                             Remote.ClearWaypoints();
-                            Remote.SetCollisionAvoidance(true);
                             Remote.FlightMode = FlightMode.OneWay;
+                            Remote.Direction = Base6Directions.Direction.Forward;
+                            Remote.SetDockingMode(true);
                             Remote.AddWaypoint(ApproachPath[0], "Docking Approach");
                             Remote.SetAutoPilotEnabled(true);
                         }
@@ -135,7 +145,7 @@ namespace IngameScript
                             Remote.SetCollisionAvoidance(false);
                             Remote.SetDockingMode(true);
                             //-move to waypoint(accounting for connector offset)
-                            Remote.SpeedLimit = 1;
+                            Remote.SpeedLimit = 3;
                             Remote.SetAutoPilotEnabled(true);
                         }
                         //Drone.ManeuverService.AlignTo(dockingConnectorOrientation, DockingConnector);
@@ -193,9 +203,26 @@ namespace IngameScript
                 DockingConnector = connectors.First();
 
                 //Apply connector offset
-                //Vector3D offset = (Drone.ManeuverService.Remote.GetPosition() - DockingConnector.GetPosition());
-                //ApproachPath[0] = ApproachPath[0] + offset;
-                //ApproachPath[1] = ApproachPath[1] + offset;
+                //Vector3D connectorOffset = Drone.ManeuverService.Remote.GetPosition() - DockingConnector.GetPosition();
+
+                // Centre of Mass Offset math
+                double offsetLength = (Drone.ManeuverService.Remote.GetPosition() - Drone.ManeuverService.Remote.CenterOfMass).Length();
+                Vector3D offsetDirection = Vector3D.Normalize(Drone.ManeuverService.Remote.GetPosition() - ApproachPath[0]);
+                Vector3D connectorOffset = offsetLength * offsetDirection;
+                ApproachPath[0] = ApproachPath[0] + connectorOffset;
+
+                // Connector Offset math
+                offsetLength = (Drone.ManeuverService.Remote.GetPosition() - DockingConnector.GetPosition()).Length();
+                offsetDirection = Vector3D.Normalize(dockingConnectorOrientation);
+                connectorOffset = offsetLength * offsetDirection;
+                ApproachPath[1] = ApproachPath[1] + connectorOffset;
+
+
+                //Vector3D centerOfMassOffset = Drone.ManeuverService.Remote.GetPosition() - Drone.ManeuverService.Remote.CenterOfMass;
+
+                
+                //ApproachPath[1] = ApproachPath[1] + Drone.ManeuverService.Remote.Position;
+                //ApproachPath[1] = ApproachPath[1] + connectorOffset;
 
                 // TODO: it would be nicer to have names rather than magic numbers.
                 this.State = 6;
