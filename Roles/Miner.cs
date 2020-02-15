@@ -121,14 +121,16 @@ namespace IngameScript
                             //-activate connector and lock
                             DockingConnector.Enabled = true;
                             DockingConnector.Connect();
-                            //-shutdown(thrusters and gyros off, set batteries to recharge and fuel tanks to stockpile)
-                            //- set UpdateFrequency.Once
+                            if (DockingConnector.IsConnected)
+                            {
+                                Remote.SetAutoPilotEnabled(false);
+                            }
 
                             this.State = 8;
                         }
-                        else if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[1]) < 10)
+                        else if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[1]) < 5)
                         {
-                            Remote.SpeedLimit = 1;
+                            Remote.SpeedLimit = 0.1f;
                         }
                         else if (Remote.IsAutoPilotEnabled == false)
                         {
@@ -148,18 +150,13 @@ namespace IngameScript
                             Remote.SpeedLimit = 3;
                             Remote.SetAutoPilotEnabled(true);
                         }
-                        //Drone.ManeuverService.AlignTo(dockingConnectorOrientation, DockingConnector);
-                        //this.State = 8;
+                        this.State = 8;
                         break;
                     case 8:
-                        //Docking
+                        //Docked
                         Drone.Program.Echo($"Docked apparently.");
-                        //bool contact = Drone.ManeuverService.FlyToPosition(ApproachPath[1], DockingConnector);
-                        //if (contact)
-                        //{
-                        //    DockingConnector.Enabled = true;
-                        //    DockingConnector.Connect();
-                        //}
+
+                        //Shutdown
                         break;
                 }
             }
