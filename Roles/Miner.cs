@@ -24,147 +24,142 @@ namespace IngameScript
         public class Miner : Role
         {
             /* 
-              * Miners are simple automatons and follow this state progression:
-              * 0:  requesting departure clearance
-              * 1:  departing
-              * 2:  flying to mining site
-              * 3:  mining
-              * 4:  requesting docking clearance
-              * 5:  waiting for docking clearance
-              * 6:  returning to drone controller
-              * 7:  aligning to docking port
-              * 8:  Docking
-              * 9:  Shutting down
-              */
+            * Miners are simple automatons and follow this state progression:
+            * 0:  departing
 
-            private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
-            private Vector3D dockingConnectorOrientation;
+
+            * 1:  departing
+            * 2:  flying to mining site
+            * 3:  mining
+            * 4:  requesting docking clearance
+            * 5:  waiting for docking clearance
+            * 6:  returning to drone controller
+            * 7:  aligning to docking port
+            * 8:  Docking
+            * 9:  Shutting down
+            */
+            
+            public IMyRemoteControl Remote;
             private IMyShipConnector DockingConnector;
 
-            public Miner(Drone drone)
+            private Vector3D DeparturePoint;
+            // TODO: this will need to be a lot more complex, but for now the actual mining will be manual,
+            // the drone just needs to fly to the mining site.
+            private Vector3D MiningSite;
+            private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
+            private Vector3D dockingConnectorOrientation;
+
+            public Miner(Drone drone, Remote remote, Vector3D departurePoint, VEctor3D miningSite)
             {
                 this.Drone = drone;
-                this.State = 4;
+                this.DeparturePoint = departurePoint;
+                this.MiningSite = MiningSite;
+            
+                this.Remote = remote;
+                // Find connector for docking
+                List<IMyShipConnector> connectors = new List<IMyShipConnector>();
+                Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
+                if (connectors == null || connectors.Count == 0)
+                    throw new Exception("No docking connector found!");
+
+                this.DockingConnector = connectors.First();
+
                 this.Drone.ListenToChannel(DockingRequestChannel);
-                this.Drone.NetworkService.RegisterCallback(DockingRequestChannel, "docking_request_granted");
+                this.Drone.NetworkService.RegisterCallback(DockingRequestChannel, "callback_docking_request_granted");
+
+                this.State = 0;
             }
 
             public override void Perform()
             {
-                Drone.Program.Echo($"Miner: performing role, state: {this.State}");
-                IMyRemoteControl Remote = Drone.ManeuverService.Remote;
+                Drone.Program.Echo($"Miner: {this.State}");
 
                 switch (this.State)
                 {
+                    case 0:
+                        // Startup and Depart
+                        Drone.Startup();
+                        DockingConnector.Disconnect();
+                        DockingConnector.Enabled = false;
+                        Drone.OpenFuelTanks();
+
+                        Drone.Move(DeparturePoint, "Departure Point", dockingMode: true);
+                        break;
+                    case 1:
+                        // Departing
+                        if (Drone.Moving(DeparturePoint, docking: false))
+                        {   
+                            // Departure complete, begin moving to the mining site
+                            this.State = 2;
+                            Drone.Move(MiningSite, "Mining Site", dockingMode: false);
+                        }
+                        break;
+                    case 2:
+                        // Flying to Mining Site
+                        if (Drone.Moving(MiningSite, docking: false))
+                        {   
+                            // Arrived at mining site. Go Idle and wait for manual mining via remoote control
+                            this.State = 3;
+                        }
+                        break;
+                    case 3:
+                        // Manual mining for now
+                        Drone.Sleep();
+                        // When manual mining is complete, call this PB remotely with the argument "4" to override state and send it home.
+                        break;
                     case 4:
-                        // Get a path to following as well as the location
-                        Drone.Program.Echo("Sending docking request");
+                        // Since Mining is a manual process ATM, the drone is asleep in the previous state.
+                        Drone.Wake();
+                        // Request Docking Clearance and wait
                         Drone.NetworkService.BroadcastMessage(DockingRequestChannel, "Requesting Docking Clearance");
                         this.State = 5;
                         break;
                     case 5:
-                        //Waiting for docking clearance from controller
+                        // Waiting for docking clearance from controller
+                        if (dockingConnectorOrientation != null)
+                        {
+                            Drone.Move(ApproachPath[0], "Docking Approach", dockingMode: true);
+                            this.State = 6;
+                        }
                         break;
                     case 6:
-                        //Use docking path from the last state
-                        //Drone.Program.Echo($"Moving to Approach position {dockingConnectorOrientation}, {ApproachPath[0]}, {ApproachPath[1]} {DateTime.Now.ToString()}");
-                        //Drone.ManeuverService.GoToPosition(ApproachPath[0], DockingConnector, false, false);
-                        //Drone.FlyToCoordinates(ApproachPath[0]);
-
-                        //Maybe I just need to reinit the maneuver service when I pass a block? 
-
-                        // Autopilot
-                        //-set collision avoidance on and direction to remote forward
-                        //-flight mode one-way
-                        //- set waypoints, compensating for remote's offset from centre of gravity
-                        //- activate autopilot
-                        //- clear waypoints
-                        // if (Drone.ManeuverService.DistanceTo(ApproachPath[0]) <= 1)
-                        Drone.Program.Echo($"Docking Path");
-                        Drone.Program.Echo($"{ApproachPath[0]}");
-                        Drone.Program.Echo($"{ApproachPath[1]}");
-                        //break;
-
-                        Drone.Program.Echo($"Postion: {Remote.GetPosition().ToString()}");
-                        Drone.Program.Echo($"Target: {ApproachPath[0].ToString()}");
-                        Drone.Program.Echo($"Distance: {Vector3D.Distance(Remote.GetPosition(), ApproachPath[0])}");
-
-                        // Apply center of mass offset here
-                        if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[0]) < 1)
+                        // Moving to Docking Approach point
+                        if (Drone.Moving(ApproachPath[0], docking: false))
                         {
                             this.State = 7;
+                            Drone.Move(ApproachPath[1], "Docking Port", dockingMode: true, direction: Base6Directions.Direction.Backward);
                         }
-                        else if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[0]) < 100 && Remote.SpeedLimit != 5)
-                        {
-                            Remote.SpeedLimit = 5;
-                        }
-                        else if (Remote.IsAutoPilotEnabled == false)
-                        {
-                            //Move to docking approach
-                            Remote.ClearWaypoints();
-                            Remote.FlightMode = FlightMode.OneWay;
-                            Remote.Direction = Base6Directions.Direction.Forward;
-                            Remote.SetDockingMode(true);
-                            Remote.AddWaypoint(ApproachPath[0], "Docking Approach");
-                            Remote.SetAutoPilotEnabled(true);
-                        }
-
                         break;
                     case 7:
-                        //Docking with the autopilot?
-                        Drone.Program.Echo($"Postion: {Remote.GetPosition().ToString()}");
-                        Drone.Program.Echo($"Target: {ApproachPath[1].ToString()}");
-                        Drone.Program.Echo($"Distance: {Vector3D.Distance(Remote.GetPosition(), ApproachPath[1])}");
-
-                        if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[1]) < 1)
+                        // Final Approach
+                        if (Drone.Moving(ApproachPath[1], doocking: true))
                         {
-                            //-activate connector and lock
+                            // activate connector and lock
                             DockingConnector.Enabled = true;
                             DockingConnector.Connect();
+
                             if (DockingConnector.IsConnected)
                             {
+                                // Force deactivation of autopilot. We've made contact, our position doesn't matter anymore
                                 Remote.SetAutoPilotEnabled(false);
                             }
 
                             this.State = 8;
                         }
-                        else if (Vector3D.Distance(Remote.GetPosition(), ApproachPath[1]) < 5)
-                        {
-                            Remote.SpeedLimit = 0.1f;
-                        }
-                        else if (Remote.IsAutoPilotEnabled == false)
-                        {
-                            DockingConnector.Enabled = false;
-                            //-set direction to connector forward and align
-                            Remote.Direction = Base6Directions.Direction.Backward;
-                            //-clear waypoints and set collision avoidance off
-                            Remote.ClearWaypoints();
-                            //-set waypoint to connector coordinates
-                            Remote.FlightMode = FlightMode.OneWay;
-
-                            Remote.AddWaypoint(ApproachPath[1], "Docking Port");
-                            //-set docking mode
-                            Remote.SetCollisionAvoidance(false);
-                            Remote.SetDockingMode(true);
-                            //-move to waypoint(accounting for connector offset)
-                            Remote.SpeedLimit = 3;
-                            Remote.SetAutoPilotEnabled(true);
-                        }
-                        this.State = 8;
                         break;
                     case 8:
-                        //Docked
-                        Drone.Program.Echo($"Docked apparently.");
-
-                        //Shutdown
+                        Drone.Shutdown();
+                        Drone.Sleep();
                         break;
                 }
             }
 
-            public void Dock()
+            public override void AcceptArgument(string argument)
             {
-                Drone.ManeuverService.AlignTo(ApproachPath[1], DockingConnector);
-
+                if (!Vector3D.TryParse(argument, out MiningSite))
+                {
+                    this.State = Int32.Parse(argument);
+                }
             }
 
             //TODO: this is too general to live in the Miner role. It should be moved to Drone, or maybe Role
@@ -190,38 +185,18 @@ namespace IngameScript
                 Vector3D.TryParse(vectorStrings[1], out ApproachPath[0]);
                 Vector3D.TryParse(vectorStrings[2], out ApproachPath[1]);
 
-                // Find connector for docking
-                List<IMyShipConnector> connectors = new List<IMyShipConnector>();
-                Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
-
-                if (connectors == null || connectors.Count == 0)
-                    throw new Exception("No docking connector found!");
-
-                DockingConnector = connectors.First();
-
-                //Apply connector offset
-                //Vector3D connectorOffset = Drone.ManeuverService.Remote.GetPosition() - DockingConnector.GetPosition();
-
                 // Centre of Mass Offset math
-                double offsetLength = (Drone.ManeuverService.Remote.GetPosition() - Drone.ManeuverService.Remote.CenterOfMass).Length();
-                Vector3D offsetDirection = Vector3D.Normalize(Drone.ManeuverService.Remote.GetPosition() - ApproachPath[0]);
+                double offsetLength = (Remote.GetPosition() - Remote.CenterOfMass).Length();
+                Vector3D offsetDirection = Vector3D.Normalize(Remote.GetPosition() - ApproachPath[0]);
                 Vector3D connectorOffset = offsetLength * offsetDirection;
                 ApproachPath[0] = ApproachPath[0] + connectorOffset;
 
                 // Connector Offset math
-                offsetLength = (Drone.ManeuverService.Remote.GetPosition() - DockingConnector.GetPosition()).Length();
+                offsetLength = (Remote.GetPosition() - DockingConnector.GetPosition()).Length();
                 offsetDirection = Vector3D.Normalize(dockingConnectorOrientation);
                 connectorOffset = offsetLength * offsetDirection;
                 ApproachPath[1] = ApproachPath[1] + connectorOffset;
 
-
-                //Vector3D centerOfMassOffset = Drone.ManeuverService.Remote.GetPosition() - Drone.ManeuverService.Remote.CenterOfMass;
-
-                
-                //ApproachPath[1] = ApproachPath[1] + Drone.ManeuverService.Remote.Position;
-                //ApproachPath[1] = ApproachPath[1] + connectorOffset;
-
-                // TODO: it would be nicer to have names rather than magic numbers.
                 this.State = 6;
             }
 

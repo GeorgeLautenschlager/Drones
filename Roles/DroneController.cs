@@ -25,15 +25,11 @@ namespace IngameScript
         {
             public string Channel { get; private set; }
 
-            /* 
-            * Drone controllers are more complex. They're more reactive because they have to make decisions based
-            * on the needs of their drones.
-            */
             public DroneController(Drone drone)
             {
                 this.Drone = drone;
                 this.Drone.ListenToChannel(DockingRequestChannel);
-                this.Drone.NetworkService.RegisterCallback(DockingRequestChannel, "docking_request_pending");
+                this.Drone.NetworkService.RegisterCallback(DockingRequestChannel, "callback_docking_request_pending");
             }
 
             public override void Perform()

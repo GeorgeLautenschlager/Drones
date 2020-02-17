@@ -24,12 +24,10 @@ namespace IngameScript
         public class NetworkService
         {
             private Program Program;
-            private IMyRemoteControl Remote;
 
-            public NetworkService(Program program, IMyRemoteControl remote)
+            public NetworkService(Program program)
             {
                 this.Program = program;
-                this.Remote = remote;
             }
 
             public void BroadcastMessage(string channel, string message)

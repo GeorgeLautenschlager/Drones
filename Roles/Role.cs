@@ -24,6 +24,7 @@ namespace IngameScript
         public class Role
         {
             protected const string DockingRequestChannel = "docking_requests";
+            protected const string DispatchChannel = "dispatch";
             private Drone drone;
             protected int State;
 
@@ -59,6 +60,11 @@ namespace IngameScript
             public virtual string Name()
             {
                 return "Generic Role";
+            }
+
+            public void AcceptArgument(string argument)
+            {
+                throw new Exception("This role does not accept arguments.");
             }
         }
     }

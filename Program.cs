@@ -21,46 +21,48 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        MyCommandLine _commandLine = new MyCommandLine();
-        Drone drone;
+        
+        Drone Drone;
         public Program()
         {
-            Runtime.UpdateFrequency = UpdateFrequency.Update1;
+            Drone = new Drone(this);
+        }
 
-            List<IMyRemoteControl> remotes = new List<IMyRemoteControl>();
-            GridTerminalSystem.GetBlocksOfType<IMyRemoteControl>(remotes, rc => rc.CustomName == "Drone Brain" && rc.IsSameConstructAs(Me));
-            if (remotes == null || remotes.Count == 0)
-                throw new Exception("Drone has no Brain!");
-            IMyRemoteControl remote = remotes.First();
+        public void Main(string argument, UpdateType updateSource)
+        {
+            Echo($"{DateTime.Now.ToString()}");
 
-            NetworkService networkService = new NetworkService(this, remote);
-            ManeuverService maneuverService = new ManeuverService(this, remote, 2.5);
-            Echo("Services ready, building drone.");
-            drone = new Drone(this, maneuverService, networkService);
-
-            //TODO: handle multiple roles
-            string roleString = Me.CustomData as string;
-            Role role = null;
-
-            if (roleString == "miner")
+            if (argument.StartsWith("callback"))
             {
-                Echo("Assigning Role: Miner");
-                role = new Miner(drone);
+                handleCallback(argument);
             }
-            
-            if (roleString == "drone controller")
-            {
-                Echo("Assigning Role: Drone Controller");
-                role = new DroneController(drone);
+            else if (argument != null)
+            {   
+                // For now, assume one role
+                Role role = Drone.roles[0];
+                role.AcceptArgument(argument);
             }
+           
+            Drone.Perform();
+        }
 
-            if (roleString == "tester")
+        public void handleCallback(string callback)
+        {
+            Echo($"Processing callback: {callback}");
+            //TODO: this needs to be waaaaaay more general, obviously
+            switch (callback)
             {
-                role = new Tester(drone);
+                case "callback_docking_request_pending":
+                    Echo("Responding to docking request");
+                    DroneController dc = Drone.roles[0] as DroneController;
+                    dc.ProcessDockingRequest();
+                    break;
+                case "callback_docking_request_granted":
+                    Echo("Docking clearance received.");
+                    Miner m = Drone.roles[0] as Miner;
+                    m.AcceptDockingClearance();
+                    break;
             }
-
-            Role[] roles = new Role[1] { role };
-            drone.SetRoles(roles);
         }
 
         public void Save()
@@ -71,36 +73,6 @@ namespace IngameScript
             // 
             // This method is optional and can be removed if not
             // needed.
-        }
-
-        public void Main(string argument, UpdateType updateSource)
-        {
-            Echo($"{DateTime.Now.ToString()}");
-            Echo("Callbacks First");
-
-            handleCallback(argument);
-
-            Echo("Now drone stuff");
-            drone.Act();
-        }
-
-        public void handleCallback(string callback)
-        {
-            Echo($"Processing callback: {callback}");
-            //TODO: this needs to be waaaaaay more general, obviously
-            switch (callback)
-            {
-                case "docking_request_pending":
-                    Echo("Responding to docking request");
-                    DroneController dc = this.drone.roles[0] as DroneController;
-                    dc.ProcessDockingRequest();
-                    break;
-                case "docking_request_granted":
-                    Echo("Docking clearance received.");
-                    Miner m = this.drone.roles[0] as Miner;
-                    m.AcceptDockingClearance();
-                    break;
-            }
         }
     }
 }
