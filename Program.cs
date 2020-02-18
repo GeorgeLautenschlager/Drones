@@ -32,15 +32,25 @@ namespace IngameScript
         {
             Echo($"{DateTime.Now.ToString()}");
 
-            if (argument.StartsWith("callback"))
+            if (argument == null)
+            {
+                // No argument
+            }
+            else if (argument.StartsWith("callback"))
             {
                 handleCallback(argument);
             }
-            else if (argument != null)
+            else
             {   
+                string[] splitArgs = argument.Split(",");
+                if (splitArgs == null || splitArgs.Count == 2)
+                    throw new Exception("Expected two comma separated arguments!");
+
+                Drone.NetworkService.DroneControllerEntityId = Convert.ToInt64(splitArgs[0]);
+
                 // For now, assume one role
                 Role role = Drone.roles[0];
-                role.AcceptArgument(argument);
+                role.AcceptArgument(splitArgs[1]);
             }
            
             Drone.Perform();

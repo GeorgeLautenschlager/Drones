@@ -65,7 +65,7 @@ namespace IngameScript
                 this.DockingConnector = connectors.First();
 
                 this.Drone.ListenToChannel(DockingRequestChannel);
-                this.Drone.NetworkService.RegisterCallback(DockingRequestChannel, "callback_docking_request_granted");
+                this.Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "callback_docking_request_granted");
 
                 this.State = 0;
             }

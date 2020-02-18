@@ -24,6 +24,7 @@ namespace IngameScript
         public class NetworkService
         {
             private Program Program;
+            public long DroneControllerEntityId;
 
             public NetworkService(Program program)
             {
@@ -41,7 +42,7 @@ namespace IngameScript
                 Program.IGC.RegisterBroadcastListener(channel);
             }
 
-            public void RegisterCallback(string channel, string callback)
+            public void RegisterBroadcastCallback(string channel, string callback)
             {
                 Program.Echo($"Listening on channel: {channel}");
                 this.GetBroadcastListenerForChannel(channel).SetMessageCallback(callback);
@@ -60,6 +61,36 @@ namespace IngameScript
                 {
                     return listeners.First();
                 }
+            }
+
+            public void UnicastMessage(string recipient, string channel, Object message)
+            {
+                long address = AddressLookup(recipient);
+                if (address == null)
+                    throw new Exception($"Address not found for {recipient}");
+                Program.IGC.SendUnicastMessage(address, channel, message);
+            }
+
+            public IMyUnicastListener GetUnicastListener()
+            {
+                Program.IGC.UnicastListener();
+            }
+
+            public void RegisterUnicastCallback(string callback)
+            {
+                GetUnicastListener().SetMessageCallback(callback);
+            }
+
+            private long AddressLookup(string recipient)
+            {
+                long address = null;
+
+                if (recipient == "Drone Controller")
+                {
+                    address = DroneControllerEntityId;
+                }
+
+                return address;
             }
         }
     }
