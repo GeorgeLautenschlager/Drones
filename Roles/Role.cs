@@ -25,7 +25,7 @@ namespace IngameScript
         {
             protected const string DockingRequestChannel = "docking_requests";
             protected const string DispatchChannel = "dispatch";
-            private Drone drone;
+            public Drone drone;
             protected int State;
 
             protected Drone Drone
@@ -46,10 +46,16 @@ namespace IngameScript
 
             }
 
+            public IMyRemoteControl Remote()
+            {
+                return Drone.Remote;
+            }
+
             public virtual void Perform()
             {
                 Drone.Program.Echo("No proper roles assigned. Shutting Down.");
                 Drone.Shutdown();
+                Drone.Sleep();
             }
 
             public override string ToString()
@@ -60,11 +66,6 @@ namespace IngameScript
             public virtual string Name()
             {
                 return "Generic Role";
-            }
-
-            public void AcceptArgument(string argument)
-            {
-                throw new Exception("This role does not accept arguments.");
             }
         }
     }

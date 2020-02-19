@@ -7,7 +7,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Drones", "Drones.csproj", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vectors", "..\Vectors\Vectors.csproj", "{8580047B-0F4D-49C0-9F32-4DE8B0418281}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "DroneComponents", "..\DroneComponents\DroneComponents.shproj", "{D8AB6874-C415-4544-9D69-6B8B4651C808}"
+EndProject
 Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\DroneComponents\DroneComponents.projitems*{d8ab6874-c415-4544-9d69-6b8b4651c808}*SharedItemsImports = 13
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 	EndGlobalSection

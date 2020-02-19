@@ -21,39 +21,39 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        
-        Drone Drone;
+        private Drone drone;
         public Program()
         {
-            Drone = new Drone(this);
+            MyIni config = ParseIni();
+            List<MyIniKey> roleKeys = new List<MyIniKey>();
+            config.GetKeys("Roles", roleKeys);
+
+            List<Role> roles = new List<Role>();
+
+            foreach (MyIniKey roleKey in roleKeys)
+            {
+                roles.Add(RoleFactory.Build(roleKey.ToString(), config.Get(roleKey)));
+            }
+
+            this.drone = new Drone(this, roles);
         }
 
         public void Main(string argument, UpdateType updateSource)
         {
             Echo($"{DateTime.Now.ToString()}");
+            handleCallback(argument);
+            drone.Perform();
+        }
 
-            if (argument == null)
-            {
-                // No argument
-            }
-            else if (argument.StartsWith("callback"))
-            {
-                handleCallback(argument);
-            }
-            else
-            {   
-                string[] splitArgs = argument.Split(",");
-                if (splitArgs == null || splitArgs.Count == 2)
-                    throw new Exception("Expected two comma separated arguments!");
+        public MyIni ParseIni()
+        {
+            MyIni ini = new MyIni();
 
-                Drone.NetworkService.DroneControllerEntityId = Convert.ToInt64(splitArgs[0]);
+            MyIniParseResult config;
+            if (!ini.TryParse(Me.CustomData, out config))
+                throw new Exception($"Error parsing config: {config.ToString()}");
 
-                // For now, assume one role
-                Role role = Drone.roles[0];
-                role.AcceptArgument(splitArgs[1]);
-            }
-           
-            Drone.Perform();
+            return ini;
         }
 
         public void handleCallback(string callback)
@@ -64,12 +64,12 @@ namespace IngameScript
             {
                 case "callback_docking_request_pending":
                     Echo("Responding to docking request");
-                    DroneController dc = Drone.roles[0] as DroneController;
+                    DroneController dc = drone.roles[0] as DroneController;
                     dc.ProcessDockingRequest();
                     break;
                 case "callback_docking_request_granted":
                     Echo("Docking clearance received.");
-                    Miner m = Drone.roles[0] as Miner;
+                    Miner m = drone.roles[0] as Miner;
                     m.AcceptDockingClearance();
                     break;
             }

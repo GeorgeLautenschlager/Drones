@@ -39,7 +39,6 @@ namespace IngameScript
             * 9:  Shutting down
             */
             
-            public IMyRemoteControl Remote;
             private IMyShipConnector DockingConnector;
 
             private Vector3D DeparturePoint;
@@ -49,13 +48,10 @@ namespace IngameScript
             private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
             private Vector3D dockingConnectorOrientation;
 
-            public Miner(Drone drone, Remote remote, Vector3D departurePoint, VEctor3D miningSite)
+            public Miner(MyIniValue roleConfig)
             {
-                this.Drone = drone;
-                this.DeparturePoint = departurePoint;
-                this.MiningSite = MiningSite;
-            
-                this.Remote = remote;
+                ParseConfig(roleConfig);
+
                 // Find connector for docking
                 List<IMyShipConnector> connectors = new List<IMyShipConnector>();
                 Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
@@ -132,16 +128,16 @@ namespace IngameScript
                         break;
                     case 7:
                         // Final Approach
-                        if (Drone.Moving(ApproachPath[1], doocking: true))
+                        if (Drone.Moving(ApproachPath[1], docking: true))
                         {
                             // activate connector and lock
                             DockingConnector.Enabled = true;
                             DockingConnector.Connect();
 
-                            if (DockingConnector.IsConnected)
+                            if (DockingConnector.Status == MyShipConnectorStatus.Connected)
                             {
                                 // Force deactivation of autopilot. We've made contact, our position doesn't matter anymore
-                                Remote.SetAutoPilotEnabled(false);
+                                Remote().SetAutoPilotEnabled(false);
                             }
 
                             this.State = 8;
@@ -154,12 +150,18 @@ namespace IngameScript
                 }
             }
 
-            public override void AcceptArgument(string argument)
+            public void ParseConfig(MyIniValue roleConfig)
             {
-                if (!Vector3D.TryParse(argument, out MiningSite))
-                {
-                    this.State = Int32.Parse(argument);
-                }
+                String [] rawStrings = roleConfig.ToString().Split(',');
+
+                if (!Vector3D.TryParse(rawStrings[0], out DeparturePoint))
+                    throw new Exception($"Unable to parse: {rawStrings[0]} as departure point");
+
+                if (!Vector3D.TryParse(rawStrings[1], out MiningSite))
+                    throw new Exception($"Unable to parse: {rawStrings[1]} as mining site");
+
+                if (rawStrings[2] != null && rawStrings[2] != "")
+                    this.State = Int32.Parse(rawStrings[2]);
             }
 
             //TODO: this is too general to live in the Miner role. It should be moved to Drone, or maybe Role
@@ -186,13 +188,13 @@ namespace IngameScript
                 Vector3D.TryParse(vectorStrings[2], out ApproachPath[1]);
 
                 // Centre of Mass Offset math
-                double offsetLength = (Remote.GetPosition() - Remote.CenterOfMass).Length();
-                Vector3D offsetDirection = Vector3D.Normalize(Remote.GetPosition() - ApproachPath[0]);
+                double offsetLength = (Remote().GetPosition() - Remote().CenterOfMass).Length();
+                Vector3D offsetDirection = Vector3D.Normalize(Remote().GetPosition() - ApproachPath[0]);
                 Vector3D connectorOffset = offsetLength * offsetDirection;
                 ApproachPath[0] = ApproachPath[0] + connectorOffset;
 
                 // Connector Offset math
-                offsetLength = (Remote.GetPosition() - DockingConnector.GetPosition()).Length();
+                offsetLength = (Remote().GetPosition() - DockingConnector.GetPosition()).Length();
                 offsetDirection = Vector3D.Normalize(dockingConnectorOrientation);
                 connectorOffset = offsetLength * offsetDirection;
                 ApproachPath[1] = ApproachPath[1] + connectorOffset;
