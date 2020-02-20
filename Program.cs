@@ -39,7 +39,7 @@ namespace IngameScript
 
         public void Main(string argument, UpdateType updateSource)
         {
-            Echo($"{DateTime.Now.ToString()}");
+            //Echo($"{DateTime.Now.ToString()}");
             drone.HandleCallback(argument);
             drone.Perform();
         }

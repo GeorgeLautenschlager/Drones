@@ -32,9 +32,9 @@ namespace IngameScript
                     case "miner":
                         builtRole = new Miner(config);
                         break;
-                    //case "Drone Controller":
-                    //    builtRole = new DroneController(config);
-                    //    break;
+                    case "drone_controller":
+                        builtRole = new DroneController(config);
+                        break;
                     //case "Tester":
                     //    builtRole = new Tester(config);
                     //    break;

@@ -220,11 +220,10 @@ namespace IngameScript
 
             public void LogToLcd(string text)
             {
-                CallbackLog.WriteText($"Logging: {DateTime.Now}");
                 CallbackLog.WriteText(text, true);
             }
 
-            private IMyGridTerminalSystem Grid()
+            public IMyGridTerminalSystem Grid()
             {
                 return Program.GridTerminalSystem;
             }

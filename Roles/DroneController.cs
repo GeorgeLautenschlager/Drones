@@ -25,61 +25,44 @@ namespace IngameScript
         {
             public string Channel { get; private set; }
 
-            public DroneController(Drone drone)
+            public DroneController(MyIni config)
+            {
+                
+            }
+            public override void InitWithDrone(Drone drone)
             {
                 this.Drone = drone;
                 this.Drone.ListenToChannel(DockingRequestChannel);
-                this.Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "callback_docking_request_pending");
+                this.Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_pending");
             }
+
 
             public override void Perform()
             {
-                Drone.Program.Echo("Drone Controller: Perform");
-
-                IMyBroadcastListener listener = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel);
-
-                if (listener.HasPendingMessage)
-                {
-                    MyIGCMessage message = listener.AcceptMessage();
-                    Drone.Program.Echo(message.Data.ToString());
-
-                }
-                else
-                {
-                    Drone.Program.Echo($"No Messages on channel {listener.Tag}");
-                }
-
                 //For now Drone controllers just sit and wait for a message from a drone.
+                Drone.Wake();
             }
 
             public void ProcessDockingRequest()
             {
-                IMyTextPanel callbackLogger = this.Drone.Program.GridTerminalSystem.GetBlockWithName("callback_logger") as IMyTextPanel;
+                Drone.LogToLcd($"\nLogging: {DateTime.Now}");
 
-                if (callbackLogger == null)
-                    throw new Exception("No screen found");
-
-                callbackLogger.WriteText($"Logging: {DateTime.Now}");
-
-                //TODO: what if there are multiple docking requests?
                 MyIGCMessage message = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel).AcceptMessage();
 
                 if (message.Data == null)
-                    throw new Exception("No Message");
+                    Drone.LogToLcd($"\nNo Message");
 
-                callbackLogger.WriteText(message.Data.ToString());
-
-                IMyShipConnector dockingPort = this.Drone.Program.GridTerminalSystem.GetBlockWithName("Docking Port 1") as IMyShipConnector;
+                IMyShipConnector dockingPort = Drone.Grid().GetBlockWithName("Docking Port 1") as IMyShipConnector;
 
                 if (dockingPort == null)
                 {
-                    throw new Exception("Docking Port 1 not found.");
+                    Drone.LogToLcd("\nDocking Port 1 not found.");
                 }
                 else
                 {
                     Vector3D approachPoint = Vector3D.Add(dockingPort.GetPosition(), Vector3D.Multiply(dockingPort.WorldMatrix.Forward, 50));
                     List<Vector3D> dockingPath = new List<Vector3D> { approachPoint, dockingPort.GetPosition() + 0.875 * dockingPort.WorldMatrix.Forward};
-
+                    Drone.LogToLcd($"Sending message: {dockingPort.WorldMatrix.Forward},{dockingPath[0].ToString()},{dockingPath[1].ToString()}");
                     this.Drone.NetworkService.BroadcastMessage(
                         DockingRequestChannel, 
                         $"{dockingPort.WorldMatrix.Forward},{dockingPath[0].ToString()},{dockingPath[1].ToString()}"
@@ -87,9 +70,25 @@ namespace IngameScript
                 }
             }
 
+            public override void HandleCallback(string callback)
+            {
+                switch (callback)
+                {
+                    case "docking_request_pending":
+                        ProcessDockingRequest();
+                        break;
+                    case "":
+                        // Just Ignore empty arguments
+                        break;
+                    default:
+                        Drone.LogToLcd($"\nDrone received unrecognized callback: {callback}");
+                        break;
+                }
+            }
+
             public override string Name()
             {
-                return "DroneController";
+                return "drone_controller";
             }
         }
     }

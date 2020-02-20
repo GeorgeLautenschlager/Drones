@@ -47,6 +47,8 @@ namespace IngameScript
             private Vector3D MiningSite;
             private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
             private Vector3D dockingConnectorOrientation;
+            public long DroneControllerEntityId;
+            private bool DockingClearanceReceived = false;
 
             public Miner(MyIni config)
             {
@@ -69,7 +71,7 @@ namespace IngameScript
 
             public override void Perform()
             {
-                Drone.Program.Echo($"Miner: {this.State}");
+                //Drone.Program.Echo($"Miner: {this.State}");
 
                 switch (this.State)
                 {
@@ -114,10 +116,16 @@ namespace IngameScript
                         break;
                     case 5:
                         // Waiting for docking clearance from controller
-                        if (dockingConnectorOrientation != null)
+                        if (DockingClearanceReceived)
                         {
+                            Drone.LogToLcd($"\nSetting docking approach: {ApproachPath[0]}");
+                            Drone.Log($"Setting docking approach: {ApproachPath[0]}");
                             Drone.Move(ApproachPath[0], "Docking Approach", dockingMode: true);
                             this.State = 6;
+                        }
+                        else
+                        {
+                            Drone.Log("Waiting for docking clearance.");
                         }
                         break;
                     case 6:
@@ -163,6 +171,17 @@ namespace IngameScript
                 if (!Vector3D.TryParse(rawValue, out MiningSite))
                     throw new Exception($"Unable to parse: {rawValue} as mining site");
 
+                // TODO: switch to Unicasts
+                //rawValue = config.Get(Name(), "home_address").ToString();
+                //if (rawValue != null && rawValue != "")
+                //{
+                //    Int64.TryParse(rawValue, out DroneControllerEntityId);
+                //}
+                //else
+                //{
+                //    throw new Exception("Drone has no home address!");
+                //}
+
                 rawValue = config.Get(Name(), "initial_state").ToString();
                 if (rawValue != null && rawValue != "")
                 {
@@ -181,8 +200,11 @@ namespace IngameScript
                     case "docking_request_granted":
                         AcceptDockingClearance();
                         break;
+                    case "":
+                        // Just Ignore empty arguments
+                        break;
                     default:
-                        Drone.LogToLcd($"Drone received unrecognized callback: {callback}");
+                        Drone.LogToLcd($"\nDrone received unrecognized callback: {callback}");
                         break;
                 }
             }
@@ -190,28 +212,19 @@ namespace IngameScript
             //TODO: this is too general to live in the Miner role. It should be moved to Drone, or maybe Role
             public void AcceptDockingClearance()
             {
-                Drone.LogToLcd("Accepting Docking Request");
                 IMyBroadcastListener listener = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel);
 
                 if (listener == null)
-                {
-                    Drone.LogToLcd("No listener found");
-                    throw new Exception("No listener found");
-                }
+                    Drone.LogToLcd("\nNo listener found");
 
                 MyIGCMessage message = listener.AcceptMessage();
-                Drone.LogToLcd("Preparing Docking coordinates");
 
                 if (message.Data == null)
-                {
                     Drone.LogToLcd("No message");
-                    throw new Exception("No message");
-                }
 
-                Drone.LogToLcd($"{message.Data.ToString()}");
+                Drone.LogToLcd($"\nDocking Clearance: {message.Data.ToString()}");
 
                 string[] vectorStrings = message.Data.ToString().Split(',');
-                Drone.LogToLcd("Vectors Parsed");
                 Vector3D.TryParse(vectorStrings[0], out dockingConnectorOrientation);
                 Vector3D.TryParse(vectorStrings[1], out ApproachPath[0]);
                 Vector3D.TryParse(vectorStrings[2], out ApproachPath[1]);
@@ -228,7 +241,7 @@ namespace IngameScript
                 connectorOffset = offsetLength * offsetDirection;
                 ApproachPath[1] = ApproachPath[1] + connectorOffset;
 
-                this.State = 6;
+                DockingClearanceReceived = true;
             }
 
             public override string Name()
