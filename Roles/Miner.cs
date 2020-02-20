@@ -130,7 +130,7 @@ namespace IngameScript
                         break;
                     case 6:
                         // Moving to Docking Approach point
-                        if (Drone.Moving(ApproachPath[0], docking: false))
+                        if (Drone.Moving(ApproachPath[0], docking: true))
                         {
                             this.State = 7;
                             Drone.Move(ApproachPath[1], "Docking Port", dockingMode: true, direction: Base6Directions.Direction.Backward);
@@ -138,10 +138,11 @@ namespace IngameScript
                         break;
                     case 7:
                         // Final Approach
+                        DockingConnector.Enabled = true;
+
                         if (Drone.Moving(ApproachPath[1], docking: true))
                         {
                             // activate connector and lock
-                            DockingConnector.Enabled = true;
                             DockingConnector.Connect();
 
                             if (DockingConnector.Status == MyShipConnectorStatus.Connected)
