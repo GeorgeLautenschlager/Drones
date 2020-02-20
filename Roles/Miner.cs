@@ -81,6 +81,7 @@ namespace IngameScript
                         Drone.OpenFuelTanks();
 
                         Drone.Move(DeparturePoint, "Departure Point", dockingMode: true);
+                        this.State = 1;
                         break;
                     case 1:
                         // Departing
