@@ -24,7 +24,6 @@ namespace IngameScript
         public class Role
         {
             protected const string DockingRequestChannel = "docking_requests";
-            protected const string DispatchChannel = "dispatch";
             public Drone drone;
             protected int State;
 
@@ -66,6 +65,16 @@ namespace IngameScript
             public virtual string Name()
             {
                 return "Generic Role";
+            }
+
+            public virtual void HandleCallback(string callback)
+            {
+                Drone.LogToLcd($"Drone received unrecognized callback: {callback}");
+            }
+
+            public virtual void InitWithDrone(Drone drone)
+            {
+                this.Drone = drone;
             }
         }
     }

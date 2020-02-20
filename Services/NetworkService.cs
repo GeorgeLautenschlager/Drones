@@ -44,7 +44,6 @@ namespace IngameScript
 
             public void RegisterBroadcastCallback(string channel, string callback)
             {
-                Program.Echo($"Listening on channel: {channel}");
                 this.GetBroadcastListenerForChannel(channel).SetMessageCallback(callback);
             }
 
@@ -73,7 +72,7 @@ namespace IngameScript
 
             public IMyUnicastListener GetUnicastListener()
             {
-                Program.IGC.UnicastListener();
+                return Program.IGC.UnicastListener;
             }
 
             public void RegisterUnicastCallback(string callback)
@@ -83,7 +82,7 @@ namespace IngameScript
 
             private long AddressLookup(string recipient)
             {
-                long address = null;
+                long address = -1;
 
                 if (recipient == "Drone Controller")
                 {

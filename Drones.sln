@@ -7,12 +7,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Drones", "Drones.csproj", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vectors", "..\Vectors\Vectors.csproj", "{8580047B-0F4D-49C0-9F32-4DE8B0418281}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "DroneComponents", "..\DroneComponents\DroneComponents.shproj", "{D8AB6874-C415-4544-9D69-6B8B4651C808}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "..\test\test.csproj", "{3A0F5215-5870-4C30-9A93-C9F40839624F}"
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\DroneComponents\DroneComponents.projitems*{d8ab6874-c415-4544-9d69-6b8b4651c808}*SharedItemsImports = 13
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 	EndGlobalSection
@@ -21,6 +18,8 @@ Global
 		{5345773A-CC7E-42F6-9BF0-17C7FA6CD830}.Debug|x64.Build.0 = Debug|x64
 		{8580047B-0F4D-49C0-9F32-4DE8B0418281}.Debug|x64.ActiveCfg = Debug|x64
 		{8580047B-0F4D-49C0-9F32-4DE8B0418281}.Debug|x64.Build.0 = Debug|x64
+		{3A0F5215-5870-4C30-9A93-C9F40839624F}.Debug|x64.ActiveCfg = Debug|x64
+		{3A0F5215-5870-4C30-9A93-C9F40839624F}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

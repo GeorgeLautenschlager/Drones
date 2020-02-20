@@ -23,13 +23,13 @@ namespace IngameScript
     {
         public class RoleFactory
         {
-            public static Role Build(string roleName, MyIniValue config)
+            public static Role Build(string roleName, MyIni config)
             {
-                Role builtRole = null;
+                Role builtRole;
 
                 switch (roleName)
                 {
-                    case "Miner":
+                    case "miner":
                         builtRole = new Miner(config);
                         break;
                     //case "Drone Controller":

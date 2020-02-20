@@ -29,7 +29,7 @@ namespace IngameScript
             {
                 this.Drone = drone;
                 this.Drone.ListenToChannel(DockingRequestChannel);
-                this.Drone.NetworkService.RegisterCallback(DockingRequestChannel, "callback_docking_request_pending");
+                this.Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "callback_docking_request_pending");
             }
 
             public override void Perform()

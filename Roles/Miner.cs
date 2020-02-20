@@ -48,22 +48,23 @@ namespace IngameScript
             private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
             private Vector3D dockingConnectorOrientation;
 
-            public Miner(MyIniValue roleConfig)
+            public Miner(MyIni config)
             {
-                ParseConfig(roleConfig);
+                ParseConfig(config);
+            }
 
-                // Find connector for docking
+            public override void InitWithDrone(Drone drone)
+            {
+                this.Drone = drone;
+
                 List<IMyShipConnector> connectors = new List<IMyShipConnector>();
                 Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
                 if (connectors == null || connectors.Count == 0)
                     throw new Exception("No docking connector found!");
 
                 this.DockingConnector = connectors.First();
-
                 this.Drone.ListenToChannel(DockingRequestChannel);
-                this.Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "callback_docking_request_granted");
-
-                this.State = 0;
+                this.Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_granted");
             }
 
             public override void Perform()
@@ -150,39 +151,66 @@ namespace IngameScript
                 }
             }
 
-            public void ParseConfig(MyIniValue roleConfig)
+            public void ParseConfig(MyIni config)
             {
-                String [] rawStrings = roleConfig.ToString().Split(',');
 
-                if (!Vector3D.TryParse(rawStrings[0], out DeparturePoint))
-                    throw new Exception($"Unable to parse: {rawStrings[0]} as departure point");
+                string rawValue = config.Get(Name(), "departure_point").ToString();
+                if (!Vector3D.TryParse(rawValue, out DeparturePoint))
+                    throw new Exception($"Unable to parse: {rawValue} as departure point");
 
-                if (!Vector3D.TryParse(rawStrings[1], out MiningSite))
-                    throw new Exception($"Unable to parse: {rawStrings[1]} as mining site");
+                rawValue = config.Get(Name(), "mining_site").ToString();
+                if (!Vector3D.TryParse(rawValue, out MiningSite))
+                    throw new Exception($"Unable to parse: {rawValue} as mining site");
 
-                if (rawStrings[2] != null && rawStrings[2] != "")
-                    this.State = Int32.Parse(rawStrings[2]);
+                rawValue = config.Get(Name(), "initial_state").ToString();
+                if (rawValue != null && rawValue != "")
+                {
+                    Int32.TryParse(rawValue, out this.State);
+                }
+                else
+                {
+                    throw new Exception("initial_state is missing");
+                }
+            }
+
+            public override void HandleCallback(string callback)
+            {
+                switch (callback)
+                {
+                    case "docking_request_granted":
+                        AcceptDockingClearance();
+                        break;
+                    default:
+                        Drone.LogToLcd($"Drone received unrecognized callback: {callback}");
+                        break;
+                }
             }
 
             //TODO: this is too general to live in the Miner role. It should be moved to Drone, or maybe Role
             public void AcceptDockingClearance()
             {
-                Drone.Program.Echo("Accepting Docking Request");
+                Drone.LogToLcd("Accepting Docking Request");
                 IMyBroadcastListener listener = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel);
 
                 if (listener == null)
+                {
+                    Drone.LogToLcd("No listener found");
                     throw new Exception("No listener found");
+                }
 
                 MyIGCMessage message = listener.AcceptMessage();
-                Drone.Program.Echo("Preparing Docking coordinates");
+                Drone.LogToLcd("Preparing Docking coordinates");
 
                 if (message.Data == null)
+                {
+                    Drone.LogToLcd("No message");
                     throw new Exception("No message");
+                }
 
-                Drone.Program.Echo($"{message.Data.ToString()}");
+                Drone.LogToLcd($"{message.Data.ToString()}");
 
                 string[] vectorStrings = message.Data.ToString().Split(',');
-                Drone.Program.Echo("Vectors Parsed");
+                Drone.LogToLcd("Vectors Parsed");
                 Vector3D.TryParse(vectorStrings[0], out dockingConnectorOrientation);
                 Vector3D.TryParse(vectorStrings[1], out ApproachPath[0]);
                 Vector3D.TryParse(vectorStrings[2], out ApproachPath[1]);
@@ -204,7 +232,7 @@ namespace IngameScript
 
             public override string Name()
             {
-                return "Miner";
+                return "miner";
             }
         }
     }

@@ -25,14 +25,13 @@ namespace IngameScript
         public Program()
         {
             MyIni config = ParseIni();
-            List<MyIniKey> roleKeys = new List<MyIniKey>();
-            config.GetKeys("Roles", roleKeys);
+            List<string> sections = new List<string>();
+            config.GetSections(sections);
 
             List<Role> roles = new List<Role>();
-
-            foreach (MyIniKey roleKey in roleKeys)
+            foreach (string section in sections)
             {
-                roles.Add(RoleFactory.Build(roleKey.ToString(), config.Get(roleKey)));
+                roles.Add(RoleFactory.Build(section, config));
             }
 
             this.drone = new Drone(this, roles);
@@ -41,7 +40,7 @@ namespace IngameScript
         public void Main(string argument, UpdateType updateSource)
         {
             Echo($"{DateTime.Now.ToString()}");
-            handleCallback(argument);
+            drone.HandleCallback(argument);
             drone.Perform();
         }
 
@@ -54,25 +53,6 @@ namespace IngameScript
                 throw new Exception($"Error parsing config: {config.ToString()}");
 
             return ini;
-        }
-
-        public void handleCallback(string callback)
-        {
-            Echo($"Processing callback: {callback}");
-            //TODO: this needs to be waaaaaay more general, obviously
-            switch (callback)
-            {
-                case "callback_docking_request_pending":
-                    Echo("Responding to docking request");
-                    DroneController dc = drone.roles[0] as DroneController;
-                    dc.ProcessDockingRequest();
-                    break;
-                case "callback_docking_request_granted":
-                    Echo("Docking clearance received.");
-                    Miner m = drone.roles[0] as Miner;
-                    m.AcceptDockingClearance();
-                    break;
-            }
         }
 
         public void Save()

@@ -38,6 +38,7 @@ namespace IngameScript
             private List<IMyBatteryBlock> Batteries = new List<IMyBatteryBlock>();
             private List<IMyGasTank> FuelTanks = new List<IMyGasTank>();
             public IMyRemoteControl Remote;
+            IMyTextPanel CallbackLog;
 
             public Drone(Program program, List<Role> roles)
             {
@@ -48,10 +49,12 @@ namespace IngameScript
                 foreach(Role role in this.Roles)
                 {
                     role.drone = this;
+                    role.InitWithDrone(this);
                 }
 
                 InitializeBrain();
                 InitializeBlocks();
+                CallbackLog = Grid().GetBlockWithName("callback_log") as IMyTextPanel;
 
                 Program.Echo("Drone Initialized");
             }
@@ -88,6 +91,7 @@ namespace IngameScript
 
             public void Perform()
             {
+                return;
                 Wake();
 
                 foreach (Role role in Roles)
@@ -199,9 +203,23 @@ namespace IngameScript
                 NetworkService.RegisterBroadcastListener(channel);
             }
 
-            private void Log(string text)
+            public void HandleCallback(string callback)
+            {
+                foreach (Role role in Roles)
+                {
+                    role.HandleCallback(callback);
+                }
+            }
+
+            public void Log(string text)
             {
                 this.Program.Echo(text);
+            }
+
+            public void LogToLcd(string text)
+            {
+                CallbackLog.WriteText($"Logging: {DateTime.Now}");
+                CallbackLog.WriteText(text, true);
             }
 
             private IMyGridTerminalSystem Grid()
