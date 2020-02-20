@@ -24,7 +24,7 @@ namespace IngameScript
         public class Role
         {
             protected const string DockingRequestChannel = "docking_requests";
-            private Drone drone;
+            public Drone drone;
             protected int State;
 
             protected Drone Drone
@@ -45,10 +45,16 @@ namespace IngameScript
 
             }
 
+            public IMyRemoteControl Remote()
+            {
+                return Drone.Remote;
+            }
+
             public virtual void Perform()
             {
                 Drone.Program.Echo("No proper roles assigned. Shutting Down.");
                 Drone.Shutdown();
+                Drone.Sleep();
             }
 
             public override string ToString()
@@ -59,6 +65,16 @@ namespace IngameScript
             public virtual string Name()
             {
                 return "Generic Role";
+            }
+
+            public virtual void HandleCallback(string callback)
+            {
+                Drone.LogToLcd($"Drone received unrecognized callback: {callback}");
+            }
+
+            public virtual void InitWithDrone(Drone drone)
+            {
+                this.Drone = drone;
             }
         }
     }

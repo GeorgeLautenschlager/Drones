@@ -27,40 +27,176 @@ namespace IngameScript
         */
         public class Drone
         {
+
+            private const float DEFAULT_SPEED_LIMIT = 5;
             public Program Program;
-            public Role[] roles;
+            public List<Role> Roles;
             public ManeuverService ManeuverService;
             public NetworkService NetworkService;
+            private List<IMyGyro> Gyros = new List<IMyGyro>();
+            private List<IMyThrust> Thrusters = new List<IMyThrust>();
+            private List<IMyBatteryBlock> Batteries = new List<IMyBatteryBlock>();
+            private List<IMyGasTank> FuelTanks = new List<IMyGasTank>();
+            public IMyRemoteControl Remote;
+            IMyTextPanel CallbackLog;
 
-            public Drone(Program program, ManeuverService maneuverService, NetworkService networkService)
+            public Drone(Program program, List<Role> roles)
             {
                 this.Program = program;
-                this.ManeuverService = maneuverService;
-                this.NetworkService = networkService;
-                Program.Echo("Drone equipped");
+                this.NetworkService = new NetworkService(this.Program);
+
+                this.Roles = roles;
+                foreach(Role role in this.Roles)
+                {
+                    role.drone = this;
+                    role.InitWithDrone(this);
+                }
+
+                InitializeBrain();
+                InitializeBlocks();
+                CallbackLog = Grid().GetBlockWithName("callback_log") as IMyTextPanel;
+
+                Program.Echo("Drone Initialized");
             }
 
-            public void SetRoles(Role[] roles)
+            private void InitializeBrain()
             {
-                this.roles = roles;
-
-                string[] roleNames = new string[this.roles.Length];
-                roleNames = this.roles.Select(role => role.ToString()).ToArray();
-                Program.Echo($"Initializing drone with roles: {String.Join(",", roleNames)}");
+                List<IMyRemoteControl> remotes = new List<IMyRemoteControl>();
+                Grid().GetBlocksOfType<IMyRemoteControl>(remotes, rc => rc.CustomName == "Drone Brain" && rc.IsSameConstructAs(Program.Me));
+                if (remotes == null || remotes.Count == 0)
+                    throw new Exception("Drone has no Brain!");
+                IMyRemoteControl remote = remotes.First();
+                
+                this.Remote = remote;
             }
 
-            public void Act()
+            private void InitializeBlocks()
             {
-                if (this.roles == null || this.roles.Length == 0)
-                    throw new Exception("No Roles assigned!");
+                Grid().GetBlocksOfType<IMyGyro>(Gyros);
+                if (Gyros == null || Gyros.Count == 0)
+                    throw new Exception("Drone has no Gyros!");
+                
+                Grid().GetBlocksOfType<IMyThrust>(Thrusters);
+                if (Thrusters == null || Thrusters.Count == 0)
+                    throw new Exception("Drone has no Thrusters!");
 
-                // TODO: support multiple roles
-                this.roles[0].Perform();
+                Grid().GetBlocksOfType<IMyBatteryBlock>(Batteries);
+                if (Batteries == null || Batteries.Count == 0)
+                    throw new Exception("Drone has no Batteries!");
+
+                Grid().GetBlocksOfType<IMyGasTank>(FuelTanks);
+                if (FuelTanks == null || FuelTanks.Count == 0)
+                    throw new Exception("Drone has no Fuel Tanks!");
             }
 
-            public void FlyToCoordinates(Vector3D position)
+            public void Perform()
             {
-                ManeuverService.GoToPosition(position);
+                Wake();
+
+                foreach (Role role in Roles)
+                {
+                    role.Perform();
+                }
+            }
+
+            public void Startup()
+            {
+                foreach(IMyBatteryBlock battery in Batteries)
+                {
+                    battery.ChargeMode = ChargeMode.Auto;
+                }
+
+                foreach(IMyThrust thruster in Thrusters)
+                {
+                    thruster.Enabled = true;
+                }
+
+                foreach(IMyGyro gyro in Gyros)
+                {
+                    gyro.Enabled = true;
+                }
+            }
+
+            public void OpenFuelTanks()
+            {
+                foreach(IMyGasTank tank in FuelTanks)
+                {
+                    tank.Stockpile = false;
+                }
+            }
+
+            public void Shutdown()
+            {
+                foreach(IMyBatteryBlock battery in Batteries)
+                {
+                    battery.ChargeMode = ChargeMode.Recharge;
+                }
+
+                foreach(IMyThrust thruster in Thrusters)
+                {
+                    thruster.Enabled = false;
+                }
+
+                foreach(IMyGyro gyro in Gyros)
+                {
+                    gyro.Enabled = false;
+                }
+
+                foreach(IMyGasTank tank in FuelTanks)
+                {
+                    tank.Stockpile = true;
+                }
+            }
+
+            public void Wake()
+            {
+                Program.Runtime.UpdateFrequency = UpdateFrequency.Update1;
+            }
+
+            public void Sleep()
+            {
+                Program.Runtime.UpdateFrequency = UpdateFrequency.Once;
+            }
+            
+            // Begin moving to destination
+            public void Move(Vector3D destination, string destinationName, bool dockingMode, Base6Directions.Direction direction = Base6Directions.Direction.Forward)
+            {
+                Remote.ClearWaypoints();
+                Remote.FlightMode = FlightMode.OneWay;
+                Remote.Direction = direction;
+                Remote.SetDockingMode(dockingMode);
+                Remote.SpeedLimit = DEFAULT_SPEED_LIMIT;
+                Remote.AddWaypoint(destination, destinationName);
+                Remote.SetAutoPilotEnabled(true);
+
+                Remote.SetCollisionAvoidance(true);
+                Remote.SetCollisionAvoidance(false);
+            }
+
+            // Oversee a move to the given destination, return true when it's done
+            public bool Moving(Vector3D destination, bool docking)
+            {
+                double distance = Vector3D.Distance(Remote.GetPosition(), destination);
+                bool moveComplete = false;
+
+                if (distance < 1)
+                {
+                    Remote.SetAutoPilotEnabled(false);
+                    Remote.SpeedLimit = DEFAULT_SPEED_LIMIT;
+                    moveComplete = true;
+                }
+                else
+                {
+                    // If docking, speed limit should decrease rapidly with distance
+                    double speedLimit = Math.Pow(distance, 1/2.1);
+                    // If not docking, then we can apply a mulitplier proportional to the order of magnitude of distance
+                    if (docking == false && distance > 2000)
+                        speedLimit *= Math.Log(distance);
+                    //Don't apply speed limits outside of this valid range
+                    Remote.SpeedLimit = (float)MathHelper.Clamp(speedLimit, 1, 100);
+                }
+
+                return moveComplete;
             }
 
             //Set up a Broadcast listener and callback so this drone can respond to messages on the given channel.
@@ -69,16 +205,28 @@ namespace IngameScript
                 NetworkService.RegisterBroadcastListener(channel);
             }
 
-            public void Shutdown()
+            public void HandleCallback(string callback)
             {
-                Program.Echo("shutting down");
+                foreach (Role role in Roles)
+                {
+                    role.HandleCallback(callback);
+                }
             }
 
-            private void Log(string text)
+            public void Log(string text)
             {
                 this.Program.Echo(text);
             }
 
+            public void LogToLcd(string text)
+            {
+                CallbackLog.WriteText(text, true);
+            }
+
+            public IMyGridTerminalSystem Grid()
+            {
+                return Program.GridTerminalSystem;
+            }
         }
     }
 }

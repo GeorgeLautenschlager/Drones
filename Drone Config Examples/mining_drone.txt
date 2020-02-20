@@ -1,0 +1,5 @@
+﻿[miner]
+departure_point={X:141261.81 Y:-72345.57 Z:-60985.2}
+mining_site={X::144944.59 Y:-75448.48 Z:-62308.89}
+initial_state=0
+home_address=111967902350718416

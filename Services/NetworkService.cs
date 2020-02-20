@@ -24,12 +24,11 @@ namespace IngameScript
         public class NetworkService
         {
             private Program Program;
-            private IMyRemoteControl Remote;
+            public long DroneControllerEntityId;
 
-            public NetworkService(Program program, IMyRemoteControl remote)
+            public NetworkService(Program program)
             {
                 this.Program = program;
-                this.Remote = remote;
             }
 
             public void BroadcastMessage(string channel, string message)
@@ -43,9 +42,8 @@ namespace IngameScript
                 Program.IGC.RegisterBroadcastListener(channel);
             }
 
-            public void RegisterCallback(string channel, string callback)
+            public void RegisterBroadcastCallback(string channel, string callback)
             {
-                Program.Echo($"Listening on channel: {channel}");
                 this.GetBroadcastListenerForChannel(channel).SetMessageCallback(callback);
             }
 
@@ -62,6 +60,36 @@ namespace IngameScript
                 {
                     return listeners.First();
                 }
+            }
+
+            public void UnicastMessage(string recipient, string channel, Object message)
+            {
+                long address = AddressLookup(recipient);
+                if (address == null)
+                    throw new Exception($"Address not found for {recipient}");
+                Program.IGC.SendUnicastMessage(address, channel, message);
+            }
+
+            public IMyUnicastListener GetUnicastListener()
+            {
+                return Program.IGC.UnicastListener;
+            }
+
+            public void RegisterUnicastCallback(string callback)
+            {
+                GetUnicastListener().SetMessageCallback(callback);
+            }
+
+            private long AddressLookup(string recipient)
+            {
+                long address = -1;
+
+                if (recipient == "Drone Controller")
+                {
+                    address = DroneControllerEntityId;
+                }
+
+                return address;
             }
         }
     }

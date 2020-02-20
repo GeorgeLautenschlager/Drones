@@ -21,46 +21,38 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        MyCommandLine _commandLine = new MyCommandLine();
-        Drone drone;
+        private Drone drone;
         public Program()
         {
-            Runtime.UpdateFrequency = UpdateFrequency.Update1;
+            MyIni config = ParseIni();
+            List<string> sections = new List<string>();
+            config.GetSections(sections);
 
-            List<IMyRemoteControl> remotes = new List<IMyRemoteControl>();
-            GridTerminalSystem.GetBlocksOfType<IMyRemoteControl>(remotes, rc => rc.CustomName == "Drone Brain" && rc.IsSameConstructAs(Me));
-            if (remotes == null || remotes.Count == 0)
-                throw new Exception("Drone has no Brain!");
-            IMyRemoteControl remote = remotes.First();
-
-            NetworkService networkService = new NetworkService(this, remote);
-            ManeuverService maneuverService = new ManeuverService(this, remote, 2.5);
-            Echo("Services ready, building drone.");
-            drone = new Drone(this, maneuverService, networkService);
-
-            //TODO: handle multiple roles
-            string roleString = Me.CustomData as string;
-            Role role = null;
-
-            if (roleString == "miner")
+            List<Role> roles = new List<Role>();
+            foreach (string section in sections)
             {
-                Echo("Assigning Role: Miner");
-                role = new Miner(drone);
-            }
-            
-            if (roleString == "drone controller")
-            {
-                Echo("Assigning Role: Drone Controller");
-                role = new DroneController(drone);
+                roles.Add(RoleFactory.Build(section, config));
             }
 
-            if (roleString == "tester")
-            {
-                role = new Tester(drone);
-            }
+            this.drone = new Drone(this, roles);
+        }
 
-            Role[] roles = new Role[1] { role };
-            drone.SetRoles(roles);
+        public void Main(string argument, UpdateType updateSource)
+        {
+            //Echo($"{DateTime.Now.ToString()}");
+            drone.HandleCallback(argument);
+            drone.Perform();
+        }
+
+        public MyIni ParseIni()
+        {
+            MyIni ini = new MyIni();
+
+            MyIniParseResult config;
+            if (!ini.TryParse(Me.CustomData, out config))
+                throw new Exception($"Error parsing config: {config.ToString()}");
+
+            return ini;
         }
 
         public void Save()
@@ -71,36 +63,6 @@ namespace IngameScript
             // 
             // This method is optional and can be removed if not
             // needed.
-        }
-
-        public void Main(string argument, UpdateType updateSource)
-        {
-            Echo($"{DateTime.Now.ToString()}");
-            Echo("Callbacks First");
-
-            handleCallback(argument);
-
-            Echo("Now drone stuff");
-            drone.Act();
-        }
-
-        public void handleCallback(string callback)
-        {
-            Echo($"Processing callback: {callback}");
-            //TODO: this needs to be waaaaaay more general, obviously
-            switch (callback)
-            {
-                case "docking_request_pending":
-                    Echo("Responding to docking request");
-                    DroneController dc = this.drone.roles[0] as DroneController;
-                    dc.ProcessDockingRequest();
-                    break;
-                case "docking_request_granted":
-                    Echo("Docking clearance received.");
-                    Miner m = this.drone.roles[0] as Miner;
-                    m.AcceptDockingClearance();
-                    break;
-            }
         }
     }
 }
