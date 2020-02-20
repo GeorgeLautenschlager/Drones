@@ -130,7 +130,7 @@ namespace IngameScript
                         break;
                     case 6:
                         // Moving to Docking Approach point
-                        if (Drone.Moving(ApproachPath[0], docking: true))
+                        if (Drone.Moving(ApproachPath[0], docking: false))
                         {
                             this.State = 7;
                             Drone.Move(ApproachPath[1], "Docking Port", dockingMode: true, direction: Base6Directions.Direction.Backward);
@@ -149,9 +149,8 @@ namespace IngameScript
                             {
                                 // Force deactivation of autopilot. We've made contact, our position doesn't matter anymore
                                 Remote().SetAutoPilotEnabled(false);
+                                this.State = 8;
                             }
-
-                            this.State = 8;
                         }
                         break;
                     case 8:

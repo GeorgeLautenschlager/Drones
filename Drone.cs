@@ -190,7 +190,7 @@ namespace IngameScript
                     // If docking, speed limit should decrease rapidly with distance
                     double speedLimit = Math.Pow(distance, 1/2.1);
                     // If not docking, then we can apply a mulitplier proportional to the order of magnitude of distance
-                    if (docking == false)
+                    if (docking == false && distance > 2000)
                         speedLimit *= Math.Log(distance);
                     //Don't apply speed limits outside of this valid range
                     Remote.SpeedLimit = (float)MathHelper.Clamp(speedLimit, 1, 100);
