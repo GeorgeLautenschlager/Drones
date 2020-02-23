@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vectors", "..\Vectors\Vecto
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "..\test\test.csproj", "{3A0F5215-5870-4C30-9A93-C9F40839624F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LIDAR", "..\LIDAR\LIDAR.csproj", "{1782C53C-3552-45C2-8425-448C8E2A53C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Main Computer", "..\Main Computer\Main Computer.csproj", "{2533FE63-AF26-4C47-A932-15C459EDF2FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -20,6 +24,10 @@ Global
 		{8580047B-0F4D-49C0-9F32-4DE8B0418281}.Debug|x64.Build.0 = Debug|x64
 		{3A0F5215-5870-4C30-9A93-C9F40839624F}.Debug|x64.ActiveCfg = Debug|x64
 		{3A0F5215-5870-4C30-9A93-C9F40839624F}.Debug|x64.Build.0 = Debug|x64
+		{1782C53C-3552-45C2-8425-448C8E2A53C3}.Debug|x64.ActiveCfg = Debug|x64
+		{1782C53C-3552-45C2-8425-448C8E2A53C3}.Debug|x64.Build.0 = Debug|x64
+		{2533FE63-AF26-4C47-A932-15C459EDF2FC}.Debug|x64.ActiveCfg = Debug|x64
+		{2533FE63-AF26-4C47-A932-15C459EDF2FC}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

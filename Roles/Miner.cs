@@ -49,6 +49,9 @@ namespace IngameScript
             private Vector3D dockingConnectorOrientation;
             public long DroneControllerEntityId;
             private bool DockingClearanceReceived = false;
+            private bool ManualMining;
+            private bool ManualSiteApproach;
+            private bool ComputeDeparturePoint;
 
             public Miner(MyIni config)
             {
@@ -82,6 +85,12 @@ namespace IngameScript
                         DockingConnector.Enabled = false;
                         Drone.OpenFuelTanks();
 
+                        if(ComputeDeparturePoint)
+                        {
+                            DeparturePoint = DockingConnector.GetPosition() + 10 * DockingConnector.WorldMatrix.Backward;
+                        }
+
+                        Remote().SetCollisionAvoidance(true);
                         Drone.Move(DeparturePoint, "Departure Point", dockingMode: true);
                         this.State = 1;
                         break;
@@ -90,6 +99,12 @@ namespace IngameScript
                         if (Drone.Moving(DeparturePoint, docking: false))
                         {   
                             // Departure complete, begin moving to the mining site
+                            if(ManualSiteApproach)
+                            {
+                                Drone.Sleep();
+                                return;
+                            }
+
                             this.State = 2;
                             Drone.Move(MiningSite, "Mining Site", dockingMode: false);
                         }
@@ -103,9 +118,11 @@ namespace IngameScript
                         }
                         break;
                     case 3:
-                        // Manual mining for now
-                        Drone.Sleep();
-                        // When manual mining is complete, call this PB remotely with the argument "4" to override state and send it home.
+                        if (ManualMining)
+                        {
+                            Drone.Sleep();
+                            return;
+                        }
                         break;
                     case 4:
                         // Since Mining is a manual process ATM, the drone is asleep in the previous state.
@@ -133,6 +150,7 @@ namespace IngameScript
                         if (Drone.Moving(ApproachPath[0], docking: false))
                         {
                             this.State = 7;
+                            Remote().SetCollisionAvoidance(false);
                             Drone.Move(ApproachPath[1], "Docking Port", dockingMode: true, direction: Base6Directions.Direction.Backward);
                         }
                         break;
@@ -191,6 +209,10 @@ namespace IngameScript
                 {
                     throw new Exception("initial_state is missing");
                 }
+
+                ManualMining = config.Get(Name(), "manual_mining").ToBoolean();
+                ManualSiteApproach = config.Get(Name(), "manual_site_approach").ToBoolean();
+                ComputeDeparturePoint = config.Get(Name(), "compute_departure_point").ToBoolean();
             }
 
             public override void HandleCallback(string callback)

@@ -168,9 +168,6 @@ namespace IngameScript
                 Remote.SpeedLimit = DEFAULT_SPEED_LIMIT;
                 Remote.AddWaypoint(destination, destinationName);
                 Remote.SetAutoPilotEnabled(true);
-
-                Remote.SetCollisionAvoidance(true);
-                Remote.SetCollisionAvoidance(false);
             }
 
             // Oversee a move to the given destination, return true when it's done
