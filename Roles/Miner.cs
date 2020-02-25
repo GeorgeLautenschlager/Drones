@@ -52,6 +52,7 @@ namespace IngameScript
             private bool ManualMining;
             private bool ManualSiteApproach;
             private bool ComputeDeparturePoint;
+            private List<IMyShipDrill> Drills = new List<IMyShipDrill>();
 
             public Miner(MyIni config)
             {
@@ -120,7 +121,12 @@ namespace IngameScript
                     case 3:
                         if (ManualMining)
                         {
-                            Drone.Sleep();
+                            //Get Cargo
+                            if(((double)Drone.CurrentCargo().RawValue / Drone.MaxCargo.RawValue)  >= 0.95)
+                            {
+                                DeactivateDrills();
+                            }
+
                             return;
                         }
                         break;
@@ -175,6 +181,32 @@ namespace IngameScript
                         Drone.Shutdown();
                         Drone.Sleep();
                         break;
+                }
+            }
+
+            public void ActivateDrills()
+            {
+                if(Drills == null)
+                {
+                    Drone.Grid().GetBlocksOfType<IMyShipDrill>(Drills);
+                }
+
+                foreach(IMyShipDrill drill in Drills)
+                {
+                    drill.Enabled = true;
+                }
+            }
+
+            public void DeactivateDrills()
+            {
+                if (Drills == null)
+                {
+                    Drone.Grid().GetBlocksOfType<IMyShipDrill>(Drills);
+                }
+
+                foreach (IMyShipDrill drill in Drills)
+                {
+                    drill.Enabled = false;
                 }
             }
 

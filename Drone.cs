@@ -37,8 +37,10 @@ namespace IngameScript
             private List<IMyThrust> Thrusters = new List<IMyThrust>();
             private List<IMyBatteryBlock> Batteries = new List<IMyBatteryBlock>();
             private List<IMyGasTank> FuelTanks = new List<IMyGasTank>();
+            private List<IMyTerminalBlock> InventoryBlocks = new List<IMyTerminalBlock>();
             public IMyRemoteControl Remote;
-            IMyTextPanel CallbackLog;
+            public IMyTextPanel CallbackLog;
+            public MyFixedPoint MaxCargo = 0;
 
             public Drone(Program program, List<Role> roles)
             {
@@ -87,6 +89,17 @@ namespace IngameScript
                 Grid().GetBlocksOfType<IMyGasTank>(FuelTanks);
                 if (FuelTanks == null || FuelTanks.Count == 0)
                     throw new Exception("Drone has no Fuel Tanks!");
+
+                InventoryBlocks = new List<IMyTerminalBlock>();
+                Grid().GetBlocksOfType<IMyTerminalBlock>(InventoryBlocks, block => block.InventoryCount > 0);
+
+                foreach(IMyTerminalBlock block in InventoryBlocks)
+                {
+                    for (int i = 0; i < block.InventoryCount; i++)
+                    {
+                        MaxCargo += block.GetInventory(i).MaxVolume;
+                    }
+                }
             }
 
             public void Perform()
@@ -209,6 +222,22 @@ namespace IngameScript
                     role.HandleCallback(callback);
                 }
             }
+
+            public MyFixedPoint CurrentCargo()
+            {
+                MyFixedPoint currentCargo = 0;
+
+                foreach (IMyTerminalBlock block in InventoryBlocks)
+                {
+                    for (int i = 0; i < block.InventoryCount; i++)
+                    {
+                        currentCargo += block.GetInventory(i).CurrentVolume;
+                    }
+                }
+
+                return currentCargo;
+            }
+
 
             public void Log(string text)
             {
