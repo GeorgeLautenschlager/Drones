@@ -16,6 +16,7 @@ using VRage.Game.ObjectBuilders.Definitions;
 using VRage.Game;
 using VRage;
 using VRageMath;
+using System.Diagnostics;
 
 namespace IngameScript
 {
@@ -26,63 +27,62 @@ namespace IngameScript
             /* 
                 * This is a test role
             */
+            private IMyShipConnector DockingConnector;
+            private Vector3D Target;
 
-            IMyCockpit Cockpit;
-            List<IMyTerminalBlock> Blocks = new List<IMyTerminalBlock>();
-            Vector3D originalPosition;
-            Vector3D targetPosition;
-            private DateTime transitionTime;
+            public Tester(MyIni config)
+            {
+                ParseConfig(config);
+            }
 
-            public Tester(Drone drone)
+            public override void InitWithDrone(Drone drone)
             {
                 this.Drone = drone;
+                List<IMyShipConnector> connectors = new List<IMyShipConnector>();
+                Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
+                if (connectors == null || connectors.Count == 0)
+                    throw new Exception("No docking connector found!");
+
+                this.DockingConnector = connectors.First();
                 this.State = 0;
-                Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyCockpit>(Blocks);
-                Cockpit = Blocks.First() as IMyCockpit;
-                originalPosition = Cockpit.GetPosition();
-                targetPosition = originalPosition + 100 * Cockpit.WorldMatrix.Forward;
+            }
+
+            public void ParseConfig(MyIni config)
+            {
+
             }
 
             public override void Perform()
             {
-                Drone.Program.Echo("Performing role");
                 switch (this.State)
                 {
                     case 0:
-                        Drone.Program.Echo("Moving Forward");
-                        if (this.Drone.ManeuverService.GoToWithThrusters(targetPosition, Cockpit))
-                        {
-                            this.State = 1;
-                            this.transitionTime = DateTime.Now;
-                            this.Drone.ManeuverService.Reset();
-                        }
+                        Drone.Startup();
+                        DockingConnector.Disconnect();
+                        DockingConnector.Enabled = false;
+                        Drone.OpenFuelTanks();
+
+                        MyWaypointInfo waypoint;
+                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141170.2:-72210.54:-61138.71:", out waypoint);
+                        Target = waypoint.Coords;
+
+                        Drone.Log("Starting Move");
+
+                        this.State = 1;
                         break;
                     case 1:
-                        Drone.Program.Echo("Taking a break");
-                        if (this.transitionTime.AddSeconds(2) < DateTime.Now)
-                        {
+                        if ((Drone.Remote.CenterOfMass - Target).Length() > 300 || (Drone.FlyTo(Target)))
                             this.State = 2;
-                            this.transitionTime = DateTime.Now;
-                        }
+
+                        Drone.Log("Moving");
                         break;
                     case 2:
-                        Drone.Program.Echo("Moving Back");
-                        if (this.Drone.ManeuverService.GoToWithThrusters(originalPosition, Cockpit))
-                        {
-                            this.State = 3;
-                            this.transitionTime = DateTime.Now;
-                            this.Drone.ManeuverService.Reset();
-                        }
-                        break;
-                    case 3:
-                        Drone.Program.Echo("Taking a break");
-                        if (this.transitionTime.AddSeconds(2) < DateTime.Now)
-                        {
-                            this.State = 0;
-                            this.transitionTime = DateTime.Now;
-                        }
-                        break;
+                        Drone.AllStop();
+                        Drone.Shutdown();
+                        Drone.Sleep();
 
+                        Drone.Log("Shutting down");
+                        break;
                 }
             }
 

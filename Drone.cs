@@ -34,7 +34,7 @@ namespace IngameScript
             public ManeuverService ManeuverService;
             public NetworkService NetworkService;
             private List<IMyGyro> Gyros = new List<IMyGyro>();
-            private List<IMyThrust> Thrusters = new List<IMyThrust>();
+            private List<IMyThrust>Thrusters = new List<IMyThrust>();
             private List<IMyBatteryBlock> Batteries = new List<IMyBatteryBlock>();
             private List<IMyGasTank> FuelTanks = new List<IMyGasTank>();
             private List<IMyTerminalBlock> InventoryBlocks = new List<IMyTerminalBlock>();
@@ -56,6 +56,7 @@ namespace IngameScript
 
                 InitializeBrain();
                 InitializeBlocks();
+                this.ManeuverService = new ManeuverService(this.Program, Remote);
                 CallbackLog = Grid().GetBlockWithName("callback_log") as IMyTextPanel;
 
                 Program.Echo("Drone Initialized");
@@ -238,7 +239,6 @@ namespace IngameScript
                 return currentCargo;
             }
 
-
             public void Log(string text)
             {
                 this.Program.Echo(text);
@@ -252,6 +252,44 @@ namespace IngameScript
             public IMyGridTerminalSystem Grid()
             {
                 return Program.GridTerminalSystem;
+            }
+        
+            public void AllStop()
+            {
+                foreach(IMyGyro gyro in Gyros)
+                {
+                    gyro.Yaw = 0;
+                    gyro.Pitch = 0;
+                    gyro.Roll = 0;
+                    gyro.GyroOverride = false;
+                }
+
+                foreach(IMyThrust thruster in Thrusters)
+                {
+                    thruster.ThrustOverride = 0;
+                }
+            }
+        
+            public bool FlyTo(Vector3D position)
+            {
+                Vector3D translationVector = Remote.CenterOfMass - position;
+                if(translationVector.Length() < 10)
+                {
+                    return true;
+                }
+
+                Vector3D targetVelocity = Vector3D.Normalize(translationVector) * Math.Pow(translationVector.Length(), 1/2.1);
+                Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
+                Vector3D transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
+
+                Log("Setting X thrust to: ");
+                this.ManeuverService.SetThrust(Vector3Extensions.Project(transformedVelocityDelta, Remote.WorldMatrix.Right)); //X
+                Log("Setting Y thrust to: ");
+                this.ManeuverService.SetThrust(Vector3Extensions.Project(transformedVelocityDelta, Remote.WorldMatrix.Up)); //Y
+                Log("Setting Z thrust to: ");
+                this.ManeuverService.SetThrust(Vector3Extensions.Project(transformedVelocityDelta, Remote.WorldMatrix.Forward)); //Z
+
+                return false;
             }
         }
     }

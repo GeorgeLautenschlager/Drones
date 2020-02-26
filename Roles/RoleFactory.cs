@@ -35,9 +35,9 @@ namespace IngameScript
                     case "drone_controller":
                         builtRole = new DroneController(config);
                         break;
-                    //case "Tester":
-                    //    builtRole = new Tester(config);
-                    //    break;
+                    case "tester":
+                        builtRole = new Tester(config);
+                        break;
                     default:
                         throw new Exception($"Unable to build role: {roleName}");
                         break;

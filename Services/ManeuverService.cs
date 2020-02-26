@@ -27,10 +27,10 @@ namespace IngameScript
 
             private Program Program;
             public IMyRemoteControl Remote;
-            private List<IMyGyro> Gyros;
-            private List<IMyThrust> ThrustersAll;
-            private Dictionary<Base6Directions.Direction, List<IMyThrust>> Thrusters;
-            private Dictionary<Base6Directions.Direction, float> MaxThrusters;
+            public List<IMyGyro> Gyros;
+            public List<IMyThrust> ThrustersAll;
+            public Dictionary<Base6Directions.Direction, List<IMyThrust>> Thrusters;
+            public Dictionary<Base6Directions.Direction, float> MaxThrusters; // TODO: rename this to MaxThrustInDirections
 
             private DateTime LastChecked;
             private Vector3D CurrentWaypoint;
@@ -71,6 +71,27 @@ namespace IngameScript
                 PitchPID = new PID(5, 0, 3, 0.75);
                 YawPID = new PID(5, 0, 3, 0.75);
                 RollPID = new PID(5, 0, 3, 0.75);
+            }
+
+            public void SetThrust(Vector3D deltaV)
+            {
+                Base6Directions.Direction direction = Base6Directions.GetClosestDirection(deltaV);
+                Base6Directions.Direction oppositeDirection = Base6Directions.GetOppositeDirection(direction);
+
+                float maxThrust = MaxThrusters[direction];
+                double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 1, deltaV.Length() / 0.2);
+                double force = Remote.CalculateShipMass().TotalMass * acceleration;
+               
+                foreach (IMyThrust thruster in Thrusters[direction])
+                {
+                    Program.Echo($"{force.ToString()} ({direction.ToString()})");
+                    thruster.ThrustOverride = (float)force;
+                }
+
+                foreach (IMyThrust thruster in Thrusters[oppositeDirection])
+                {
+                    thruster.ThrustOverride = 0f;
+                }
             }
 
             private IMyGridTerminalSystem gridRef()
@@ -666,6 +687,89 @@ namespace IngameScript
             }
 
             #endregion
+
+
+            //public void SetAxisThrust(string axis, double force)
+            //{
+            //    Base6Directions.Direction positiveDirection;
+            //    Base6Directions.Direction negativeDirection;
+            //    AxisDirections(axis, out positiveDirection, out negativeDirection);
+
+            //    if (force > 0)
+            //    {
+            //        foreach (IMyThrust thruster in Thrusters[positiveDirection])
+            //        {
+            //            thruster.ThrustOverride = (float)force;
+            //        }
+
+            //        foreach (IMyThrust thruster in Thrusters[negativeDirection])
+            //        {
+            //            thruster.ThrustOverride = 0f;
+            //        }
+            //    }
+            //    else if (force < 0)
+            //    {
+            //        foreach (IMyThrust thruster in Thrusters[negativeDirection])
+            //        {
+            //            thruster.ThrustOverride = (float)force;
+            //        }
+
+            //        foreach (IMyThrust thruster in Thrusters[positiveDirection])
+            //        {
+            //            thruster.ThrustOverride = 0f;
+            //        }
+            //    }
+            //    else
+            //    {
+            //        foreach (IMyThrust thruster in Thrusters[negativeDirection])
+            //        {
+            //            thruster.ThrustOverride = 0f;
+            //        }
+
+            //        foreach (IMyThrust thruster in Thrusters[positiveDirection])
+            //        {
+            //            thruster.ThrustOverride = 0f;
+            //        }
+            //    }
+            //}
+
+            //public float GetMaxAxisForce(string axis, double force)
+            //{
+            //    Base6Directions.Direction positiveDirection;
+            //    Base6Directions.Direction negativeDirection;
+            //    AxisDirections(axis, out positiveDirection, out negativeDirection);
+
+            //    if (force >= 0)
+            //    {
+            //        return MaxThrusters[positiveDirection];
+            //    }
+            //    else
+            //    {
+            //        return MaxThrusters[negativeDirection];
+            //    }
+            //}
+
+            //public void AxisDirections(string axis, out Base6Directions.Direction positiveDirection, out Base6Directions.Direction negativeDirection)
+            //{
+            //    switch (axis)
+            //    {
+            //        case "X":
+            //            positiveDirection = Base6Directions.Direction.Right;
+            //            negativeDirection = Base6Directions.Direction.Left;
+            //            break;
+            //        case "Y":
+            //            positiveDirection = Base6Directions.Direction.Up;
+            //            negativeDirection = Base6Directions.Direction.Down;
+            //            break;
+            //        case "Z":
+            //            positiveDirection = Base6Directions.Direction.Forward;
+            //            negativeDirection = Base6Directions.Direction.Backward;
+            //            break;
+            //        default:
+            //            throw new Exception("Axis not recognized!");
+            //            break;
+            //    }
+            //}
         }
     }
 }
