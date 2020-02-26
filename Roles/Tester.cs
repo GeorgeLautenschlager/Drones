@@ -71,14 +71,13 @@ namespace IngameScript
                         this.State = 1;
                         break;
                     case 1:
-                        if ((Drone.Remote.CenterOfMass - Target).Length() > 300 || (Drone.FlyTo(Target)))
+                        if ((Drone.Remote.CenterOfMass - Target).Length() > 200 || (Drone.FlyTo(Target)))
                             this.State = 2;
 
                         Drone.Log("Moving");
                         break;
                     case 2:
                         Drone.AllStop();
-                        Drone.Shutdown();
                         Drone.Sleep();
 
                         Drone.Log("Shutting down");

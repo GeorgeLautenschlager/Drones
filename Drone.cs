@@ -246,6 +246,9 @@ namespace IngameScript
 
             public void LogToLcd(string text)
             {
+                if (CallbackLog == null)
+                    return;
+
                 CallbackLog.WriteText(text, true);
             }
 
@@ -272,7 +275,7 @@ namespace IngameScript
         
             public bool FlyTo(Vector3D position)
             {
-                Vector3D translationVector = Remote.CenterOfMass - position;
+                Vector3D translationVector = position - Remote.CenterOfMass;
                 if(translationVector.Length() < 10)
                 {
                     return true;
@@ -282,12 +285,26 @@ namespace IngameScript
                 Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
                 Vector3D transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
 
+                Vector3D projection;
+                Vector3D directionVector;
+
+                //X
+                directionVector = new Vector3D(Remote.WorldMatrix.Right);
+                projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
+                this.ManeuverService.SetThrust(projection);
                 Log("Setting X thrust to: ");
-                this.ManeuverService.SetThrust(Vector3Extensions.Project(transformedVelocityDelta, Remote.WorldMatrix.Right)); //X
+
+                //Z
+                directionVector = new Vector3D(Remote.WorldMatrix.Down);
+                projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
+                this.ManeuverService.SetThrust(projection);
                 Log("Setting Y thrust to: ");
-                this.ManeuverService.SetThrust(Vector3Extensions.Project(transformedVelocityDelta, Remote.WorldMatrix.Up)); //Y
+
+                //Y
+                directionVector = new Vector3D(Remote.WorldMatrix.Forward);
+                projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
+                this.ManeuverService.SetThrust(projection);
                 Log("Setting Z thrust to: ");
-                this.ManeuverService.SetThrust(Vector3Extensions.Project(transformedVelocityDelta, Remote.WorldMatrix.Forward)); //Z
 
                 return false;
             }
