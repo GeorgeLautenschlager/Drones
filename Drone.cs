@@ -276,7 +276,7 @@ namespace IngameScript
             public bool FlyTo(Vector3D position)
             {
                 Vector3D translationVector = position - Remote.CenterOfMass;
-                if(translationVector.Length() < 10)
+                if(translationVector.Length() < 0.1)
                 {
                     return true;
                 }
