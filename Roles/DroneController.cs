@@ -61,7 +61,7 @@ namespace IngameScript
                 else
                 {
                     Vector3D approachPoint = Vector3D.Add(dockingPort.GetPosition(), Vector3D.Multiply(dockingPort.WorldMatrix.Forward, 50));
-                    List<Vector3D> dockingPath = new List<Vector3D> { approachPoint, dockingPort.GetPosition() + 0.875 * dockingPort.WorldMatrix.Forward};
+                    List<Vector3D> dockingPath = new List<Vector3D> { approachPoint, dockingPort.GetPosition()};
                     Drone.LogToLcd($"Sending message: {dockingPort.WorldMatrix.Forward},{dockingPath[0].ToString()},{dockingPath[1].ToString()}");
                     this.Drone.NetworkService.BroadcastMessage(
                         DockingRequestChannel, 

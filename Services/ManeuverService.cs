@@ -27,6 +27,7 @@ namespace IngameScript
 
             private Program Program;
             public IMyRemoteControl Remote;
+            private Drone Drone;
             public List<IMyGyro> Gyros;
             public List<IMyThrust> ThrustersAll;
             public Dictionary<Base6Directions.Direction, List<IMyThrust>> Thrusters;
@@ -48,10 +49,11 @@ namespace IngameScript
             #endregion Properties
 
 
-            public ManeuverService(Program program, IMyRemoteControl remote, double DistanceAccuracy = 0.4)
+            public ManeuverService(Program program, IMyRemoteControl remote, Drone drone, double DistanceAccuracy = 0.4)
             {
                 this.Program = program;
                 this.Remote = remote;
+                this.Drone = drone;
                 this.DistanceAccuracy = DistanceAccuracy;
 
                 // Check if a Remote Control or Cockpit is found.
@@ -77,19 +79,21 @@ namespace IngameScript
             {
                 Base6Directions.Direction direction = Base6Directions.GetClosestDirection(deltaV);
                 Base6Directions.Direction oppositeDirection = Base6Directions.GetOppositeDirection(direction);
-
+                //Program.Echo($"\nDirection: {direction.ToString()}");
+                //Program.Echo($"\nOpposite: {oppositeDirection.ToString()}");
                 float maxThrust = MaxThrusters[direction];
-                double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 1, deltaV.Length() / 0.2);
+                double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 1, Math.Pow(deltaV.Length(), 1/3));
                 double force = Remote.CalculateShipMass().TotalMass * acceleration;
-               
+
                 foreach (IMyThrust thruster in Thrusters[direction])
                 {
-                    Program.Echo($"{force.ToString()} ({direction.ToString()})");
+                    Program.Echo($"\nF: {force} {direction.ToString()} {force.ToString()}");
                     thruster.ThrustOverride = (float)force;
                 }
 
                 foreach (IMyThrust thruster in Thrusters[oppositeDirection])
                 {
+                    //Program.Echo($"\n{oppositeDirection.ToString()} 0");
                     thruster.ThrustOverride = 0f;
                 }
             }
@@ -232,22 +236,19 @@ namespace IngameScript
                 MaxThrusters[Base6Directions.Direction.Down] = 0;
                 MaxThrusters[Base6Directions.Direction.Left] = 0;
                 MaxThrusters[Base6Directions.Direction.Right] = 0;
-
                 // Set thrusters to each direction list according to its relative direction.
                 foreach (var t in ThrustersAll)
                 {
                     t.Enabled = true;
-
-                    // If not wokring, then skip this thruster.
-                    if (!t.IsWorking)
-                        continue;
-
                     // Set override to disabled.
                     t.ThrustOverride = 0f;
                     // Get direction of the thruster.
                     Base6Directions.Direction tDir = Remote.WorldMatrix.GetClosestDirection(t.WorldMatrix.Backward);
-                    Thrusters[tDir].Add(t);
-                    MaxThrusters[tDir] += t.MaxThrust;
+                    if (t.IsSameConstructAs(Program.Me))
+                    {
+                        Thrusters[tDir].Add(t);
+                        MaxThrusters[tDir] += t.MaxThrust;
+                    }
                 }
             }
 
@@ -541,22 +542,22 @@ namespace IngameScript
                 if (stopDistance > distance)
                 {
                     Program.Echo($"Too fast, increase backward thrust");
-                    SetThrust(oppositeDir, 100);
+                    SetThrustA(oppositeDir, 100);
                 }
                 else if (stopDistance < distance)
                 {
                     Program.Echo($"I wanna go fast: {powerPercent}");
-                    SetThrust(headingDir, powerPercent);
+                    SetThrustA(headingDir, powerPercent);
                 }
                 else
                 {
                     Program.Echo($"Speed is good, coasting");
-                    SetThrust(headingDir, 0);
-                    SetThrust(oppositeDir, 0);
+                    SetThrustA(headingDir, 0);
+                    SetThrustA(oppositeDir, 0);
                 }
             }
 
-            private void SetThrust(Base6Directions.Direction dir, double percent)
+            private void SetThrustA(Base6Directions.Direction dir, double percent)
             {
                 // Set the thrusters of teh required direction.
                 foreach (var thruster in Thrusters[dir])

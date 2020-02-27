@@ -56,8 +56,8 @@ namespace IngameScript
 
                 InitializeBrain();
                 InitializeBlocks();
-                this.ManeuverService = new ManeuverService(this.Program, Remote);
                 CallbackLog = Grid().GetBlockWithName("callback_log") as IMyTextPanel;
+                this.ManeuverService = new ManeuverService(this.Program, Remote, this);
 
                 Program.Echo("Drone Initialized");
             }
@@ -164,7 +164,7 @@ namespace IngameScript
 
             public void Wake()
             {
-                Program.Runtime.UpdateFrequency = UpdateFrequency.Update1;
+                Program.Runtime.UpdateFrequency = UpdateFrequency.Update10;
             }
 
             public void Sleep()
@@ -273,7 +273,7 @@ namespace IngameScript
                 }
             }
         
-            public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool align = true, bool useReferenceForPosition = false)
+            public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool useReferenceForPosition = false)
             {
                 Vector3D translationVector;
 
@@ -285,17 +285,21 @@ namespace IngameScript
                 {
                     translationVector = position - Remote.CenterOfMass;
                 }
+
+                Log($"D: {translationVector.Length()}");
                 if(translationVector.Length() < 0.1)
                 {
+                    Log("Arrived at target, All Stop.");
+                    AllStop();
                     return true;
                 }
-
-                if (align)
-                    ManeuverService.AlignBlockTo(position, reference);
-
-                Log("Aligned and Moving");
                 Vector3D targetVelocity = Vector3D.Normalize(translationVector) * Math.Pow(translationVector.Length(), 1 / 2.1);
                 Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
+
+                Log($"DeltaV: {velocityDelta.Length()}");
+                if (velocityDelta.Length() < MathHelper.Clamp(translationVector.Length()/1000, 0.25, 5))
+                    return false;
+
                 Vector3D transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
 
                 Vector3D projection;
@@ -305,19 +309,16 @@ namespace IngameScript
                 directionVector = new Vector3D(Remote.WorldMatrix.Right);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
                 this.ManeuverService.SetThrust(projection);
-                Log("Setting X thrust to: ");
 
                 //Z
                 directionVector = new Vector3D(Remote.WorldMatrix.Down);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
                 this.ManeuverService.SetThrust(projection);
-                Log("Setting Y thrust to: ");
 
                 //Y
                 directionVector = new Vector3D(Remote.WorldMatrix.Forward);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
                 this.ManeuverService.SetThrust(projection);
-                Log("Setting Z thrust to: ");
 
                 return false;
             }

@@ -75,7 +75,7 @@ namespace IngameScript
 
             public override void Perform()
             {
-                //Drone.Program.Echo($"Miner: {this.State}");
+                Drone.Program.Echo($"Miner: {this.State}");
 
                 switch (this.State)
                 {
@@ -89,31 +89,33 @@ namespace IngameScript
                         if(ComputeDeparturePoint)
                         {
                             DeparturePoint = DockingConnector.GetPosition() + 10 * DockingConnector.WorldMatrix.Backward;
+                            Drone.Log($"Prepared Departure Point: {DeparturePoint.ToString()}");
                         }
-
-                        Remote().SetCollisionAvoidance(true);
-                        Drone.Move(DeparturePoint, "Departure Point", dockingMode: true);
+                        Drone.Log("Ready for Departure");
                         this.State = 1;
                         break;
                     case 1:
                         // Departing
-                        if (Drone.Moving(DeparturePoint, docking: false))
-                        {   
-                            // Departure complete, begin moving to the mining site
-                            if(ManualSiteApproach)
-                            {
-                                Drone.Sleep();
-                                return;
-                            }
-
+                        Drone.Log($"Departing to: {DeparturePoint.ToString()}");
+                        if (Drone.FlyTo(DeparturePoint, Drone.Remote))
+                        {
+                            Drone.Log($"Departure Complete");
                             this.State = 2;
-                            Drone.Move(MiningSite, "Mining Site", dockingMode: false);
                         }
                         break;
                     case 2:
+                        if (ManualSiteApproach)
+                        {
+                            Drone.Log("Going to sleep");
+                            Drone.Sleep();
+                            return;
+                        }
+
+                        Drone.Log($"Flying to Mining Site: {MiningSite.ToString()}");
                         // Flying to Mining Site
-                        if (Drone.Moving(MiningSite, docking: false))
-                        {   
+                        if (Drone.FlyTo(MiningSite, Drone.Remote))
+                        {
+                            Drone.Log("Arrived at mining site");
                             // Arrived at mining site. Go Idle and wait for manual mining via remoote control
                             this.State = 3;
                         }
@@ -121,12 +123,8 @@ namespace IngameScript
                     case 3:
                         if (ManualMining)
                         {
-                            //Get Cargo
-                            if(((double)Drone.CurrentCargo().RawValue / Drone.MaxCargo.RawValue)  >= 0.95)
-                            {
-                                DeactivateDrills();
-                            }
-
+                            Drone.Log("Arrived at mining site");
+                            Drone.Sleep();
                             return;
                         }
                         break;
@@ -143,7 +141,6 @@ namespace IngameScript
                         {
                             Drone.LogToLcd($"\nSetting docking approach: {ApproachPath[0]}");
                             Drone.Log($"Setting docking approach: {ApproachPath[0]}");
-                            Drone.Move(ApproachPath[0], "Docking Approach", dockingMode: true);
                             this.State = 6;
                         }
                         else
@@ -153,18 +150,22 @@ namespace IngameScript
                         break;
                     case 6:
                         // Moving to Docking Approach point
-                        if (Drone.Moving(ApproachPath[0], docking: false))
+                        Drone.Log("Flying to Docking Approach.");
+                        if (Drone.FlyTo(ApproachPath[0], Drone.Remote))
                         {
                             this.State = 7;
-                            Remote().SetCollisionAvoidance(false);
-                            Drone.Move(ApproachPath[1], "Docking Port", dockingMode: true, direction: Base6Directions.Direction.Backward);
                         }
                         break;
                     case 7:
+                        //Align to Docking port
+                        if (Drone.ManeuverService.AlignBlockTo(ApproachPath[1], DockingConnector))
+                            this.State = 8;
+                        break;
+                    case 8:
                         // Final Approach
                         DockingConnector.Enabled = true;
 
-                        if (Drone.Moving(ApproachPath[1], docking: true))
+                        if (Drone.FlyTo(ApproachPath[1], DockingConnector))
                         {
                             // activate connector and lock
                             DockingConnector.Connect();
@@ -172,12 +173,12 @@ namespace IngameScript
                             if (DockingConnector.Status == MyShipConnectorStatus.Connected)
                             {
                                 // Force deactivation of autopilot. We've made contact, our position doesn't matter anymore
-                                Remote().SetAutoPilotEnabled(false);
-                                this.State = 8;
+                                Drone.AllStop();
+                                this.State = 9;
                             }
                         }
                         break;
-                    case 8:
+                    case 9:
                         Drone.Shutdown();
                         Drone.Sleep();
                         break;
@@ -284,16 +285,16 @@ namespace IngameScript
                 Vector3D.TryParse(vectorStrings[2], out ApproachPath[1]);
 
                 // Centre of Mass Offset math
-                double offsetLength = (Remote().GetPosition() - Remote().CenterOfMass).Length();
-                Vector3D offsetDirection = Vector3D.Normalize(Remote().GetPosition() - ApproachPath[0]);
-                Vector3D connectorOffset = offsetLength * offsetDirection;
-                ApproachPath[0] = ApproachPath[0] + connectorOffset;
+                //double offsetLength = (Remote().GetPosition() - Remote().CenterOfMass).Length();
+                //Vector3D offsetDirection = Vector3D.Normalize(Remote().GetPosition() - ApproachPath[0]);
+                //Vector3D connectorOffset = offsetLength * offsetDirection;
+                //ApproachPath[0] = ApproachPath[0] + connectorOffset;
 
                 // Connector Offset math
-                offsetLength = (Remote().GetPosition() - DockingConnector.GetPosition()).Length();
-                offsetDirection = Vector3D.Normalize(dockingConnectorOrientation);
-                connectorOffset = offsetLength * offsetDirection;
-                ApproachPath[1] = ApproachPath[1] + connectorOffset;
+                //offsetLength = (Remote().GetPosition() - DockingConnector.GetPosition()).Length();
+                //offsetDirection = Vector3D.Normalize(dockingConnectorOrientation);
+                //connectorOffset = offsetLength * offsetDirection;
+                //ApproachPath[1] = ApproachPath[1] + connectorOffset;
 
                 DockingClearanceReceived = true;
             }
