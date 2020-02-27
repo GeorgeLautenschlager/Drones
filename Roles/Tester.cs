@@ -71,12 +71,18 @@ namespace IngameScript
                         this.State = 1;
                         break;
                     case 1:
-                        if ((Drone.Remote.CenterOfMass - Target).Length() > 200 || (Drone.FlyTo(Target)))
-                            this.State = 2;
+                        //translationVector = Target - DockingConnector.GetPosition();
+                        //if (Drone.ManeuverService.AlignBlockTo(Target, DockingConnector))
+                        //    this.State = 2;
+                        this.State = 2;
+                        break;
+                    case 2:
+                        if ((Drone.Remote.CenterOfMass - Target).Length() > 500 || (Drone.FlyTo(Target, DockingConnector, true, true)))
+                            this.State = 3;
 
                         Drone.Log("Moving");
                         break;
-                    case 2:
+                    case 3:
                         Drone.AllStop();
                         Drone.Sleep();
 

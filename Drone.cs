@@ -273,15 +273,28 @@ namespace IngameScript
                 }
             }
         
-            public bool FlyTo(Vector3D position)
+            public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool align = true, bool useReferenceForPosition = false)
             {
-                Vector3D translationVector = position - Remote.CenterOfMass;
+                Vector3D translationVector;
+
+                if (useReferenceForPosition)
+                {
+                    translationVector = position - reference.GetPosition();
+                }
+                else
+                {
+                    translationVector = position - Remote.CenterOfMass;
+                }
                 if(translationVector.Length() < 0.1)
                 {
                     return true;
                 }
 
-                Vector3D targetVelocity = Vector3D.Normalize(translationVector) * Math.Pow(translationVector.Length(), 1/2.1);
+                if (align)
+                    ManeuverService.AlignBlockTo(position, reference);
+
+                Log("Aligned and Moving");
+                Vector3D targetVelocity = Vector3D.Normalize(translationVector) * Math.Pow(translationVector.Length(), 1 / 2.1);
                 Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
                 Vector3D transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
 
