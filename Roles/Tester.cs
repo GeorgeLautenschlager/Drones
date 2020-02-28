@@ -29,6 +29,8 @@ namespace IngameScript
             */
             private IMyShipConnector DockingConnector;
             private Vector3D Target;
+            private Move Move;
+            private IMyCockpit Cockpit;
 
             public Tester(MyIni config)
             {
@@ -44,6 +46,13 @@ namespace IngameScript
                     throw new Exception("No docking connector found!");
 
                 this.DockingConnector = connectors.First();
+
+                List<IMyCockpit> cockpits = new List<IMyCockpit>();
+                Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyCockpit>(cockpits);
+                if (cockpits == null || cockpits.Count == 0)
+                    throw new Exception("No docking connector found!");
+
+                this.Cockpit = cockpits.First();
                 this.State = 0;
             }
 
@@ -54,6 +63,8 @@ namespace IngameScript
 
             public override void Perform()
             {
+                Drone.Log($"Tester Performing state: {this.State}");
+
                 switch (this.State)
                 {
                     case 0:
@@ -71,13 +82,15 @@ namespace IngameScript
                         this.State = 1;
                         break;
                     case 1:
-                        //translationVector = Target - DockingConnector.GetPosition();
-                        //if (Drone.ManeuverService.AlignBlockTo(Target, DockingConnector))
-                        //    this.State = 2;
+                        Queue<Vector3D> path = new Queue<Vector3D>();
+                        path.Enqueue(Target);
+                        Drone.Log("Setting Up Move");
+                        Move = new Move(this.Drone, path, "Between Waypoints", this.Cockpit);
+
                         this.State = 2;
                         break;
                     case 2:
-                        if ((Drone.Remote.CenterOfMass - Target).Length() > 500 || (Drone.FlyTo(Target, DockingConnector, true)))
+                        if ((Drone.Remote.CenterOfMass - Target).Length() > 500 || Move.Perform())
                             this.State = 3;
 
                         Drone.Log("Moving");
