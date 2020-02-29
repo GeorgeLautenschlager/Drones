@@ -41,6 +41,8 @@
     <Compile Include="Roles\RoleFactory.cs" />
     <Compile Include="Roles\Tester.cs" />
     <Compile Include="Roles\DroneController.cs" />
+    <Compile Include="Services\DockingAttempt.cs" />
+    <Compile Include="Services\Move.cs" />
     <Compile Include="Services\NetworkService.cs" />
     <Compile Include="Services\VectorHelper.cs" />
     <Compile Include="Services\PID.cs" />

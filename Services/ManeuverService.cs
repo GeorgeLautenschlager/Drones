@@ -82,7 +82,7 @@ namespace IngameScript
                 //Program.Echo($"\nDirection: {direction.ToString()}");
                 //Program.Echo($"\nOpposite: {oppositeDirection.ToString()}");
                 float maxThrust = MaxThrusters[direction];
-                double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 1, Math.Pow(deltaV.Length(), 1/3));
+                double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 1, Math.Pow(deltaV.Length(), 0.8));
                 double force = Remote.CalculateShipMass().TotalMass * acceleration;
 
                 foreach (IMyThrust thruster in Thrusters[direction])

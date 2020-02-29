@@ -84,13 +84,30 @@ namespace IngameScript
                     case 1:
                         Queue<Vector3D> path = new Queue<Vector3D>();
                         path.Enqueue(Target);
+
+                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141270.2:-72210.54:-61138.71:", out waypoint);
+                        Target = waypoint.Coords;
+                        path.Enqueue(Target);
+
+                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141270.2:-72310.54:-61138.71:", out waypoint);
+                        Target = waypoint.Coords;
+                        path.Enqueue(Target);
+
+                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141170.2:-72310.54:-61138.71:", out waypoint);
+                        Target = waypoint.Coords;
+                        path.Enqueue(Target);
+
+                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141170.2:-72210.54:-61138.71:", out waypoint);
+                        Target = waypoint.Coords;
+                        path.Enqueue(Target);
+
                         Drone.Log("Setting Up Move");
-                        Move = new Move(this.Drone, path, "Between Waypoints", this.Cockpit);
+                        Move = new Move(this.Drone, path, Drone.Remote, true);
 
                         this.State = 2;
                         break;
                     case 2:
-                        if ((Drone.Remote.CenterOfMass - Target).Length() > 500 || Move.Perform())
+                        if (Move.Perform())
                             this.State = 3;
 
                         Drone.Log("Moving");

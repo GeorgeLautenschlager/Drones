@@ -273,18 +273,9 @@ namespace IngameScript
                 }
             }
         
-            public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool useReferenceForPosition = false)
+            public bool FlyTo(Vector3D position, IMyTerminalBlock reference)
             {
-                Vector3D translationVector;
-
-                if (useReferenceForPosition)
-                {
-                    translationVector = position - reference.GetPosition();
-                }
-                else
-                {
-                    translationVector = position - Remote.CenterOfMass;
-                }
+                Vector3D translationVector = position - reference.GetPosition();
 
                 Log($"D: {translationVector.Length()}");
                 if(translationVector.Length() < 0.1)
