@@ -24,13 +24,15 @@ namespace IngameScript
         public class NetworkService
         {
             private Program Program;
-            public long DroneControllerEntityId;
+            private Dictionary<string, long> UnicastRecipients;
 
             public NetworkService(Program program)
             {
                 this.Program = program;
+                this.UnicastRecipients = new Dictionary<string, long>();
             }
 
+            #region Broadcast
             public void BroadcastMessage(string channel, string message)
             {
                 Program.Echo($"Sending Message: {message} to channel {channel} at {DateTime.Now.ToString()}");
@@ -61,7 +63,9 @@ namespace IngameScript
                     return listeners.First();
                 }
             }
+            #endregion
 
+            #region Unicast
             public void UnicastMessage(string recipient, string channel, Object message)
             {
                 long address = AddressLookup(recipient);
@@ -80,17 +84,11 @@ namespace IngameScript
                 GetUnicastListener().SetMessageCallback(callback);
             }
 
-            private long AddressLookup(string recipient)
+            public void RegisterUnicastRecipient(string name, long entityId)
             {
-                long address = -1;
-
-                if (recipient == "Drone Controller")
-                {
-                    address = DroneControllerEntityId;
-                }
-
-                return address;
+                UnicastRecipients.Add(name, entityId);
             }
+            #endregion
         }
     }
 }
