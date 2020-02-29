@@ -40,7 +40,7 @@ namespace IngameScript
                 this.Aligned = align;
                 this.Waypoints = waypoints;
                 this.State = 0;
-                this.Align = true;
+                this.Align = align;
             }
 
             public bool Perform()
@@ -65,11 +65,13 @@ namespace IngameScript
                         break;
 
                     case 1:
+                        Drone.Log("Rotating");
                         if (Drone.ManeuverService.AlignBlockTo(CurrentWaypoint, ReferenceBlock))
                             this.State = 2;
                         break;
 
                     case 2:
+                        Drone.Log("Translating");
                         if (Drone.FlyTo(CurrentWaypoint, ReferenceBlock))
                         {
                             this.State = 3;
@@ -85,99 +87,12 @@ namespace IngameScript
 
                 }
 
-                //switch (this.State)
-                //{
-                //    case 0:
-                //        Drone.AllStop();
-                //        this.State = 1;
-                //        break;
 
-                //    case 1:
-                //        //set new waypoint and make sure the drone has stopped
-                //        if (Waypoints.Count == 0)
-                //            return true;
-                        
-                //        CurrentWaypoint = Waypoints.Dequeue();
-                //        Aligned = false;
-                //        this.State = 2;
-                //        break;
-
-                //    case 2:
-                //        //translate and optionally align
-                //        if (AlignmentMode == "Simultaneous")
-                //        {
-                //            Drone.ManeuverService.AlignBlockTo(CurrentWaypoint, ReferenceBlock);
-                //        }
-                //        else if(AlignmentMode == "First")
-                //        {
-                //            Drone.Log($"Aligned: {Aligned}");
-                //            if (!Aligned && Drone.ManeuverService.AlignBlockTo(CurrentWaypoint, ReferenceBlock))
-                //            {
-                //                Aligned = true;
-                //                Drone.AllStop();
-                //            }
-                //            else if(!Aligned)
-                //            {
-                //                Drone.Log("Aligning");
-                //                break;
-                //            }
-                //        }
-
-                //        if (Drone.FlyTo(CurrentWaypoint, ReferenceBlock))
-                //        {
-                //            Drone.AllStop();
-                //            if (Waypoints.Count > 0)
-                //            {
-                //                this.State = 1;
-                //            }
-                //            else
-                //            {
-                //                this.State = 3;
-                //            }
-                //        }
-                //        else
-                //        {
-                //            Drone.Log($"Flying to waypoint: {CurrentWaypoint.ToString()}");
-                //        }
-
-                //        break;
-                    
-                //    case 3:
-                //        Drone.AllStop();
-                //        return true;
-                //}
 
                 return false;
             }
 
-            //public void Transition()
-            //{
-            //    if (Waypoints.Count == 0)
-            //    {
-            //        this.State = 3;
-            //        return;
-            //    }
-
-
-            //    if (AlignmentMode == "Between Waypoints" && this.State == 0 || this.State == 2)
-            //    {
-
-            //        this.State = 1;
-            //    }
-            //    else if (this.State == 1 || this.State == 0)
-            //    {
-            //        if (Waypoints.Count > 0)
-            //        {
-            //            this.State = 2;
-            //        }
-            //        else
-            //        {
-            //            //The Queue is empty, move to final state
-            //            this.State = 3;
-            //        }
-            //    }
-
-            //}
+            
         }
     }
 }

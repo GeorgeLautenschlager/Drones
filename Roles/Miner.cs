@@ -53,6 +53,8 @@ namespace IngameScript
             private bool ManualSiteApproach;
             private bool ComputeDeparturePoint;
             private List<IMyShipDrill> Drills = new List<IMyShipDrill>();
+            private DockingAttempt Docking;
+            private Move Move;
 
             public Miner(MyIni config)
             {
@@ -64,6 +66,7 @@ namespace IngameScript
                 this.Drone = drone;
 
                 List<IMyShipConnector> connectors = new List<IMyShipConnector>();
+                //TODO: make sure you don't grab a connector on the other grid
                 Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
                 if (connectors == null || connectors.Count == 0)
                     throw new Exception("No docking connector found!");
@@ -89,17 +92,17 @@ namespace IngameScript
                         if(ComputeDeparturePoint)
                         {
                             DeparturePoint = DockingConnector.GetPosition() + 10 * DockingConnector.WorldMatrix.Backward;
-                            Drone.Log($"Prepared Departure Point: {DeparturePoint.ToString()}");
                         }
-                        Drone.Log("Ready for Departure");
                         this.State = 1;
                         break;
                     case 1:
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { DeparturePoint }), Drone.Remote, false);
+
                         // Departing
-                        Drone.Log($"Departing to: {DeparturePoint.ToString()}");
-                        if (Drone.FlyTo(DeparturePoint, Drone.Remote))
+                        if (Move.Perform())
                         {
-                            Drone.Log($"Departure Complete");
+                            Move = null;
                             this.State = 2;
                         }
                         break;
@@ -111,19 +114,18 @@ namespace IngameScript
                             return;
                         }
 
-                        Drone.Log($"Flying to Mining Site: {MiningSite.ToString()}");
-                        // Flying to Mining Site
-                        if (Drone.FlyTo(MiningSite, Drone.Remote))
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { MiningSite }), Drone.Remote, true);
+
+                        if (Move.Perform())
                         {
-                            Drone.Log("Arrived at mining site");
-                            // Arrived at mining site. Go Idle and wait for manual mining via remoote control
+                            Move = null;
                             this.State = 3;
                         }
                         break;
                     case 3:
                         if (ManualMining)
                         {
-                            Drone.Log("Arrived at mining site");
                             Drone.Sleep();
                             return;
                         }
@@ -164,6 +166,11 @@ namespace IngameScript
                     case 8:
                         // Final Approach
                         DockingConnector.Enabled = true;
+
+
+                        //=================================
+                        //TODO:  use the connectors bounding box to compute an offset?
+                        //=================================
 
                         if (Drone.FlyTo(ApproachPath[1], DockingConnector))
                         {
@@ -253,7 +260,8 @@ namespace IngameScript
                 switch (callback)
                 {
                     case "docking_request_granted":
-                        AcceptDockingClearance();
+                        //AcceptDockingClearance();
+                        this.Docking.ProcessClearance();
                         break;
                     case "":
                         // Just Ignore empty arguments

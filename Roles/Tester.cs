@@ -47,12 +47,6 @@ namespace IngameScript
 
                 this.DockingConnector = connectors.First();
 
-                List<IMyCockpit> cockpits = new List<IMyCockpit>();
-                Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyCockpit>(cockpits);
-                if (cockpits == null || cockpits.Count == 0)
-                    throw new Exception("No docking connector found!");
-
-                this.Cockpit = cockpits.First();
                 this.State = 0;
             }
 

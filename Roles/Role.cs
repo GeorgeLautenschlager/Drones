@@ -76,6 +76,8 @@ namespace IngameScript
             {
                 this.Drone = drone;
             }
+
+            //TODO: SetupMove, PollMove, ClearMove
         }
     }
 }
