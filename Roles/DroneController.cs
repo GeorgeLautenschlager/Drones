@@ -74,6 +74,31 @@ namespace IngameScript
             {
                 switch (callback)
                 {
+                    case "unicast":
+                        // We only support one Unicast for now
+                        Drone.LogToLcd($"\nLogging: {DateTime.Now}");
+                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
+
+                        if (message.Data == null)
+                            Drone.LogToLcd($"\nNo Message");
+
+                        IMyShipConnector dockingPort = Drone.Grid().GetBlockWithName("Docking Port 1") as IMyShipConnector;
+
+                        if (dockingPort == null)
+                        {
+                            Drone.LogToLcd("\nDocking Port 1 not found.");
+                        }
+                        else
+                        {
+                            ImmutableList<Vector3D> payload = new ImmutableList<Vector3D>();
+                            payload.Add(dockingPort.GetPosition() + dockingPort.WorldMatrix.Forward * 50);
+                            payload.Add(dockingPort.GetPosition());
+                            Drone.LogToLcd($"Sending message: {dockingPort.WorldMatrix.Forward},{payload[0].ToString()},{payload[1].ToString()}");
+
+                            this.Drone.NetworkService.UnicastMessage(message.Source, DockingRequestChannel, payload);
+                        }
+
+                        break;
                     case "docking_request_pending":
                         ProcessDockingRequest();
                         break;
