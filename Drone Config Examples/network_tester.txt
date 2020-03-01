@@ -1,0 +1,5 @@
+[network_tester]
+unicast_recipients=tester1:123456789,tester2:987654321
+use_callbacks=true
+sender=true
+message_type=Vector3D

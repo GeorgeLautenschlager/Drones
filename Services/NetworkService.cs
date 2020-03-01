@@ -30,6 +30,7 @@ namespace IngameScript
             {
                 this.Program = program;
                 this.UnicastRecipients = new Dictionary<string, long>();
+                GetUnicastListener().SetMessageCallback(callback);("unicast");
             }
 
             #region Broadcast
@@ -68,7 +69,7 @@ namespace IngameScript
             #region Unicast
             public void UnicastMessage(string recipient, string channel, Object message)
             {
-                long address = AddressLookup(recipient);
+                long address = UnicastRecipients[recipient];
                 if (address == null)
                     throw new Exception($"Address not found for {recipient}");
                 Program.IGC.SendUnicastMessage(address, channel, message);
@@ -77,11 +78,6 @@ namespace IngameScript
             public IMyUnicastListener GetUnicastListener()
             {
                 return Program.IGC.UnicastListener;
-            }
-
-            public void RegisterUnicastCallback(string callback)
-            {
-                GetUnicastListener().SetMessageCallback(callback);
             }
 
             public void RegisterUnicastRecipient(string name, long entityId)
