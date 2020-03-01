@@ -75,6 +75,11 @@ namespace IngameScript
                 Program.IGC.SendUnicastMessage(address, channel, message);
             }
 
+            public void UnicastMessage(long address, string channel, Object message)
+            {
+                Program.IGC.SendUnicastMessage(address, channel, message);
+            }
+
             public IMyUnicastListener GetUnicastListener()
             {
                 return Program.IGC.UnicastListener;

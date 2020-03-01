@@ -45,8 +45,7 @@ namespace IngameScript
             // TODO: this will need to be a lot more complex, but for now the actual mining will be manual,
             // the drone just needs to fly to the mining site.
             private Vector3D MiningSite;
-            private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
-            private Vector3D dockingConnectorOrientation;
+            private ImmutableList ApproachPath;
             public long DroneControllerEntityId;
             private bool DockingClearanceReceived = false;
             private bool ManualMining;
@@ -134,11 +133,12 @@ namespace IngameScript
                         // Since Mining is a manual process ATM, the drone is asleep in the previous state.
                         Drone.Wake();
                         // Request Docking Clearance and wait
-                        Drone.NetworkService.BroadcastMessage(DockingRequestChannel, "Requesting Docking Clearance");
+                        Drone.NetworkService.UnicastMessage(DroneControllerEntityId, DockingRequestChannel, "Requesting Docking Clearance");
                         this.State = 5;
                         break;
                     case 5:
                         // Waiting for docking clearance from controller
+                        // TODO: Surely I do not need this flag.
                         if (DockingClearanceReceived)
                         {
                             Drone.LogToLcd($"\nSetting docking approach: {ApproachPath[0]}");
@@ -153,37 +153,41 @@ namespace IngameScript
                     case 6:
                         // Moving to Docking Approach point
                         Drone.Log("Flying to Docking Approach.");
-                        if (Drone.FlyTo(ApproachPath[0], Drone.Remote))
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[0] }), Drone.Remote, true);
+
+                        if (Move.Perform())
                         {
+                            Move = null;
                             this.State = 7;
                         }
                         break;
                     case 7:
-                        //Align to Docking port
-                        if (Drone.ManeuverService.AlignBlockTo(ApproachPath[1], DockingConnector))
-                            this.State = 8;
-                        break;
-                    case 8:
                         // Final Approach
                         DockingConnector.Enabled = true;
-
-
                         //=================================
                         //TODO:  use the connectors bounding box to compute an offset?
                         //=================================
 
-                        if (Drone.FlyTo(ApproachPath[1], DockingConnector))
-                        {
-                            // activate connector and lock
-                            DockingConnector.Connect();
+                        Drone.Log("On Final Approach");
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[1] }), DockingConnector, true);
 
-                            if (DockingConnector.Status == MyShipConnectorStatus.Connected)
-                            {
-                                // Force deactivation of autopilot. We've made contact, our position doesn't matter anymore
-                                Drone.AllStop();
-                                this.State = 9;
-                            }
+                        if (Move.Perform())
+                        {
+                            Move = null;
+                            DockingConnector.Connect();
+                            Drone.AllStop();
+                            this.State = 8;
                         }
+                        break;
+                    case 8:
+                        if (DockingConnector.Status == MyShipConnectorStatus.Connected)
+                        {   
+                            this.State = 9;
+                        }
+
+                        DockingConnector.Connect();
                         break;
                     case 9:
                         Drone.Shutdown();
@@ -230,15 +234,15 @@ namespace IngameScript
                     throw new Exception($"Unable to parse: {rawValue} as mining site");
 
                 // TODO: switch to Unicasts
-                //rawValue = config.Get(Name(), "home_address").ToString();
-                //if (rawValue != null && rawValue != "")
-                //{
-                //    Int64.TryParse(rawValue, out DroneControllerEntityId);
-                //}
-                //else
-                //{
-                //    throw new Exception("Drone has no home address!");
-                //}
+                rawValue = config.Get(Name(), "home_address").ToString();
+                if (rawValue != null && rawValue != "")
+                {
+                   Int64.TryParse(rawValue, out DroneControllerEntityId);
+                }
+                else
+                {
+                   throw new Exception("Drone has no home address!");
+                }
 
                 rawValue = config.Get(Name(), "initial_state").ToString();
                 if (rawValue != null && rawValue != "")
@@ -259,6 +263,17 @@ namespace IngameScript
             {
                 switch (callback)
                 {
+                    case "unicast":
+                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener.AcceptMessage();
+                        if (message.Data == null)
+                            Drone.LogToLcd($"\nNo Message");
+
+                        if (message.Data.Tag != DockingRequestChannel)
+                            Drone.LogToLcd("Only docking requests are supported.");
+
+                        ApproachPath = message.Data as ImmutableList<Vector3D>;
+                        DockingClearanceReceived = true;
+                        break;
                     case "docking_request_granted":
                         //AcceptDockingClearance();
                         this.Docking.ProcessClearance();
