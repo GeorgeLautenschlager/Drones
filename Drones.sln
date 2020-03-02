@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LIDAR", "..\LIDAR\LIDAR.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Main Computer", "..\Main Computer\Main Computer.csproj", "{2533FE63-AF26-4C47-A932-15C459EDF2FC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "unicast_spike", "..\unicast_spike\unicast_spike.csproj", "{210D9E70-21E2-4910-988E-EE16C2E32420}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -28,6 +30,8 @@ Global
 		{1782C53C-3552-45C2-8425-448C8E2A53C3}.Debug|x64.Build.0 = Debug|x64
 		{2533FE63-AF26-4C47-A932-15C459EDF2FC}.Debug|x64.ActiveCfg = Debug|x64
 		{2533FE63-AF26-4C47-A932-15C459EDF2FC}.Debug|x64.Build.0 = Debug|x64
+		{210D9E70-21E2-4910-988E-EE16C2E32420}.Debug|x64.ActiveCfg = Debug|x64
+		{210D9E70-21E2-4910-988E-EE16C2E32420}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

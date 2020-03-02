@@ -24,13 +24,15 @@ namespace IngameScript
         public class NetworkService
         {
             private Program Program;
-            private Dictionary<string, long> UnicastRecipients;
+            private Drone Drone;
+            public Dictionary<string, long> UnicastRecipients;
 
-            public NetworkService(Program program)
+            public NetworkService(Program program, Drone drone)
             {
-                this.Program = program;
+                Program = program;
+                this.Drone = drone;
                 this.UnicastRecipients = new Dictionary<string, long>();
-                GetUnicastListener().SetMessageCallback(callback);("unicast");
+                GetUnicastListener().SetMessageCallback("unicast");
             }
 
             #region Broadcast
@@ -70,6 +72,7 @@ namespace IngameScript
             public void UnicastMessage(string recipient, string channel, Object message)
             {
                 long address = UnicastRecipients[recipient];
+                this.Drone.LogToLcd($"Sending message to: {recipient}({address}), on channel: {channel}");
                 if (address == null)
                     throw new Exception($"Address not found for {recipient}");
                 Program.IGC.SendUnicastMessage(address, channel, message);

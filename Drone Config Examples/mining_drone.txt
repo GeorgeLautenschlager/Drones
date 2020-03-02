@@ -6,3 +6,5 @@ home_address=111967902350718416
 manual_mining=true
 manual_site_approach=true
 compute_departure_point=true
+
+

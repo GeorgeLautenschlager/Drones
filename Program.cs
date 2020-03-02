@@ -39,7 +39,11 @@ namespace IngameScript
 
         public void Main(string argument, UpdateType updateSource)
         {
+            Echo("Source=" + updateSource.ToString());
+            Echo("Me=" + Me.EntityId.ToString());
+            Echo(Me.CubeGrid.CustomName);
             //Echo($"{DateTime.Now.ToString()}");
+
             drone.HandleCallback(argument);
             drone.Perform();
         }

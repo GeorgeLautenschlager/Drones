@@ -1,5 +1,8 @@
 [network_tester]
-unicast_recipients=tester1:123456789,tester2:987654321
+unicast_recipients=miner1:96253436871717027
 use_callbacks=true
 sender=true
 message_type=Vector3D
+
+Foreman ID: 142828164750751520
+Miner ID: 96253436871717027

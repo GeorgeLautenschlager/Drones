@@ -45,7 +45,7 @@ namespace IngameScript
             public Drone(Program program, List<Role> roles)
             {
                 this.Program = program;
-                this.NetworkService = new NetworkService(this.Program);
+                this.NetworkService = new NetworkService(this.Program, this);
 
                 this.Roles = roles;
                 foreach(Role role in this.Roles)
@@ -60,6 +60,7 @@ namespace IngameScript
                 this.ManeuverService = new ManeuverService(this.Program, Remote, this);
 
                 Program.Echo("Drone Initialized");
+                LogToLcd("Drone=" + Program.Me.EntityId.ToString());
             }
 
             private void InitializeBrain()
@@ -249,7 +250,7 @@ namespace IngameScript
                 if (CallbackLog == null)
                     return;
 
-                CallbackLog.WriteText(text, true);
+                CallbackLog.WriteText($"{text}\n", true);
             }
 
             public IMyGridTerminalSystem Grid()
@@ -312,6 +313,11 @@ namespace IngameScript
                 this.ManeuverService.SetThrust(projection);
 
                 return false;
+            }
+
+            public void RegisterUnicastRecipient(string name, long address)
+            {
+                NetworkService.RegisterUnicastRecipient(name, address);
             }
         }
     }

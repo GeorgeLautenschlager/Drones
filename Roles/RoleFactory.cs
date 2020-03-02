@@ -38,6 +38,9 @@ namespace IngameScript
                     case "tester":
                         builtRole = new Tester(config);
                         break;
+                    case "network_tester":
+                        builtRole = new NetworkTester(config);
+                        break;
                     default:
                         throw new Exception($"Unable to build role: {roleName}");
                         break;

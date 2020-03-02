@@ -25,6 +25,10 @@ namespace IngameScript
         {
             private bool UseCallbacks;
             private bool Sender;
+            private string MessageType;
+            String Recipients;
+
+            String channel = "handshake";
 
             public NetworkTester(MyIni config)
             {
@@ -34,34 +38,57 @@ namespace IngameScript
             public override void InitWithDrone(Drone drone)
             {
                 this.Drone = drone;
+
+                foreach (string recipient in Recipients.Split(','))
+                {
+                    string RecipientName = recipient.Split(':')[0];
+                    long RecipientAddress = Int64.Parse(recipient.Split(':')[1]);
+                    Drone.RegisterUnicastRecipient(RecipientName, RecipientAddress);
+                    Drone.ListenToChannel(channel);
+                    Drone.NetworkService.RegisterBroadcastCallback(channel, channel);
+                }
+
                 this.State = 0;
                 this.Drone.Wake();
+
+                Drone.LogToLcd("Me=" + Drone.Program.Me.EntityId.ToString());
+
             }
 
-            public void perform()
+            public override void Perform()
             {
-                if(!UseCallbacks)
+                Drone.LogToLcd($"My Address is: {Drone.Program.Me.EntityId.ToString()}");
+                if (!UseCallbacks)
                 {
                     if(Drone.NetworkService.GetUnicastListener().HasPendingMessage)
                     {
-                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener.AcceptMessage();
+                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
                         ParseUnicast(message);
                     }
                 }
 
-                if(Sender)
+                Drone.Log("Checking for messages");
+                if (Drone.NetworkService.GetBroadcastListenerForChannel(channel).HasPendingMessage)
                 {
-                    if(message_type == "Vector3D")
+                    MyIGCMessage message = Drone.NetworkService.GetBroadcastListenerForChannel(channel).AcceptMessage();
+                    Drone.Log(message.Data.ToString());
+                    Drone.Log(message.Source.ToString());
+                }
+
+                if (Sender)
+                {
+                    if(MessageType == "Vector3D")
                     {
                         MyTuple<bool, Vector3D> payload = new MyTuple<bool, Vector3D>();
                         payload.Item1 = true;
                         payload.Item2 = Drone.Remote.GetPosition();
 
-                        Drone.NetworkService.UnicastMessage("tester1", "vector", payload);
-                        payload.Item1 = false;
-                        Drone.NetworkService.UnicastMessage("tester2", "vector", payload);
+                        Drone.Log($"Sending Position to miner1: {Drone.NetworkService.UnicastRecipients["miner1"]}");
+                        long address = Drone.NetworkService.UnicastRecipients["miner1"];
+                        Drone.Program.IGC.SendUnicastMessage<MyTuple<bool, Vector3D>>(address, "vector", payload);
+                        //Drone.NetworkService.UnicastMessage("tester1", "vector", payload);
                     }
-                    else if(message_type == "EntityId")
+                    else if(MessageType == "EntityId")
                     {
                         MyTuple<bool, long> payload = new MyTuple<bool, long>();
                         payload.Item1 = true;
@@ -70,6 +97,10 @@ namespace IngameScript
                         Drone.NetworkService.UnicastMessage("tester1", "entity_id", payload);
                         payload.Item1 = false;
                         Drone.NetworkService.UnicastMessage("tester2", "entity_id", payload);
+                    }
+                    else if(MessageType == channel)
+                    {
+                        Drone.NetworkService.BroadcastMessage(channel, $"My address is: {Drone.Program.Me.EntityId}");
                     }
                     else
                     {
@@ -82,41 +113,43 @@ namespace IngameScript
 
             public void ParseConfig(MyIni config)
             {
-                string recipients;
-                if (config.Get(Name(), "unicast_recipients").TryGetString(recipients))
-                {
-                    foreach(string recipient in recipients.Split(","))
-                    {
-                        recipient_name = recipient.Split(":")[0];
-                        recipient_address = Int64.TryParse(recipient.Split[1]);
-                        Drone.NetworkService.RegisterUnicastRecipient(recipient_name, recipient_address);
-                    }
-                }
-                else
-                {
+                if (!config.Get(Name(), "unicast_recipients").TryGetString(out Recipients))
                     throw new Exception("unicast_recipients is missing");
-                }
 
-                if(!config.TryGetBool(Name(), "use_callbacks").TryGetBoolean(out UseCallbacks))
+                if (!config.Get(Name(), "use_callbacks").TryGetBoolean(out UseCallbacks))
                     throw new Exception("use_callbacks is missing");
 
-                if(!config.TryGetBool(Name(), "sender").TryGetBoolean(out Sender))
+                if(!config.Get(Name(), "sender").TryGetBoolean(out Sender))
                     throw new Exception("sender is missing");
                 
-                if(!config.TryGetBool(Name(), "message_type").TryGetBoolean(out MessageType))
+                if(!config.Get(Name(), "message_type").TryGetString(out MessageType))
                     throw new Exception("message type is missing");
             }
         
             public override void HandleCallback(string callback)
             {
+                Drone.LogToLcd($"running callback: {callback}");
                 switch (callback)
                 {
                     // named callbacks are from broadcast messages
                     // "unicast" denotes that there is a unicast message
                     // the tag of the unicast message tells the drone how to interpret it
                     case "unicast":
-                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener.AcceptMessage();
+                        if (Drone.NetworkService.GetUnicastListener().HasPendingMessage)
+                        {
+                            Drone.LogToLcd($"No Message!");
+                        }
+                        else
+                        {
+                            Drone.LogToLcd($"Message Received.");
+                        }
+
+                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
                         ParseUnicast(message);
+                        break;
+                    case "handshake":
+                        message = Drone.NetworkService.GetBroadcastListenerForChannel("handshake").AcceptMessage();
+                        Drone.LogToLcd($"Message source: {message.Source}");
                         break;
                     case "":
                         // Just Ignore empty arguments
@@ -129,34 +162,35 @@ namespace IngameScript
 
             public void ParseUnicast(MyIGCMessage unicast)
             {
+                Drone.LogToLcd($"Parsing message with tag: {unicast.Tag}");
                 switch (unicast.Tag)
                 {
                     case "vector":
-                        MyTuple<bool, Vector3D> dataTuple = message.Data as MyTuple<Boolean, Vector3D>;
+                        MyTuple<bool, Vector3D> vectorTuple = (MyTuple < Boolean, Vector3D>)unicast.Data;
 
-                        if(dataTuple.Item1)
+                        if(vectorTuple.Item1)
                         {
-                            Drone.LogToLcd($"Received Vector: {dataTuple.Item2.ToString()}");
+                            Drone.LogToLcd($"Received Vector: {vectorTuple.Item2.ToString()}");
                         }
                         else
                         {
-                            Drone.Log($"Received Vector: {dataTuple.Item2.ToString()}");
+                            Drone.Log($"Received Vector: {vectorTuple.Item2.ToString()}");
                         }
 
                         MyTuple<string, Vector3D> echo = new MyTuple<string, Vector3D>("Position received, reciprocating", Drone.Remote.GetPosition());
-                        Program.IGC.SendUnicastMessage(unicast.source, "echo", echo);
+                        Drone.Program.IGC.SendUnicastMessage(unicast.Source, "echo", echo);
 
                         break;
                     case "entity_id":
-                        MyTuple<bool, Long> dataTuple = message.Data as MyTuple<Boolean, long>;
+                        MyTuple<bool, long> idTuple = (MyTuple<Boolean, long>)unicast.Data;
 
-                        if(dataTuple.Item1)
+                        if(idTuple.Item1)
                         {
-                            Drone.LogToLcd($"Received Entity ID: {dataTuple.Item2}");
+                            Drone.LogToLcd($"Received Entity ID: {idTuple.Item2}");
                         }
                         else
                         {
-                            Drone.Log($"Received Entity ID: {dataTuple.Item2}");
+                            Drone.Log($"Received Entity ID: {idTuple.Item2}");
                         }
                         
                         break;
@@ -168,6 +202,11 @@ namespace IngameScript
                         Drone.Log("Tag not recognized!");
                         break;
                 }
+            }
+
+            public override string Name()
+            {
+                return "network_tester";
             }
         }
     }
