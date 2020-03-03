@@ -100,11 +100,14 @@ namespace IngameScript
                         }
                         else
                         {
-                            MyTuple<Vector3D, Vector3D> payload = new MyTuple<Vector3D, Vector3D>();
-                            payload.Item1 = dockingPort.GetPosition() + dockingPort.WorldMatrix.Forward * 50;
-                            payload.Item2 = dockingPort.GetPosition();
+                            MyTuple<Vector3D, Vector3D, Vector3D> payload = new MyTuple<Vector3D, Vector3D, Vector3D>();
+                            payload.Item1 = dockingPort.GetPosition() + dockingPort.WorldMatrix.Forward * 40;
+                            payload.Item2 = dockingPort.GetPosition() + 1.5 * dockingPort.WorldMatrix.Forward;
 
                             Drone.LogToLcd($"\nClearance granted: {message.Source}");
+                            Drone.LogToLcd($"\nApproach: {payload.Item1.ToString()}");
+                            Drone.LogToLcd($"\nDocking Port: { payload.Item2.ToString()}");
+
                             Drone.Program.IGC.SendUnicastMessage(message.Source, DockingRequestChannel, payload);
                         }
 

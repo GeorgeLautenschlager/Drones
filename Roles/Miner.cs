@@ -110,7 +110,6 @@ namespace IngameScript
                     case 2:
                         if (ManualSiteApproach)
                         {
-                            Drone.Log("Going to sleep");
                             Drone.Sleep();
                             return;
                         }
@@ -132,26 +131,19 @@ namespace IngameScript
                         }
                         break;
                     case 4:
-                        // Since Mining is a manual process ATM, the drone is asleep in the previous state.
                         Drone.Wake();
-                        // Request Docking Clearance and wait
-                        //Drone.NetworkService.BroadcastMessage(DockingRequestChannel, "Requesting Docking Clearance");
-                        //Drone.NetworkService.UnicastMessage(ForemanAddress, DockingRequestChannel, "Requesting Docking Clearance");
-                        Drone.LogToLcd($"\nRequesting Docking Clearance");
                         Drone.Program.IGC.SendUnicastMessage(ForemanAddress, DockingRequestChannel, "Requesting Docking Clearance");
                         this.State = 5;
                         break;
                     case 5:
                         // Waiting for docking clearance from controller
+                        Drone.Log("Waiting for docking clearance.");
                         if (DockingClearanceReceived)
                         {
-                            Drone.LogToLcd($"\nSetting docking approach: {ApproachPath[0]}");
-                            Drone.Log($"Setting docking approach: {ApproachPath[0]}");
                             this.State = 6;
-                        }
-                        else
-                        {
-                            Drone.Log("Waiting for docking clearance.");
+                            Drone.LogToLcd("Clearance Received");
+                            Drone.LogToLcd($"Approach: {ApproachPath[0].ToString()}");
+                            Drone.LogToLcd($"Docking Port: {ApproachPath[1].ToString()}\n");
                         }
                         break;
                     case 6:
@@ -180,6 +172,8 @@ namespace IngameScript
                             Move = null;
                             this.State = 8;
                         }
+
+                        DockingConnector.Connect();
                         break;
                     case 8:
                         if (DockingConnector.Status == MyShipConnectorStatus.Connected)
@@ -269,14 +263,13 @@ namespace IngameScript
 
                         if (message.Tag == DockingRequestChannel)
                         {
-                            MyTuple<Vector3D, Vector3D> messageTuple = (MyTuple<Vector3D, Vector3D>)message.Data;
+                            MyTuple<Vector3D, Vector3D, Vector3D> messageTuple = (MyTuple<Vector3D, Vector3D, Vector3D>)message.Data;
                             ApproachPath[0] = messageTuple.Item1;
                             ApproachPath[1] = messageTuple.Item2;
                             DockingClearanceReceived = true;
                         }
                         else if (message.Tag == "recall")
                         {
-                            Drone.LogToLcd("Returning to Base!");
                             this.State = 4;
                         }
                         else
@@ -287,7 +280,6 @@ namespace IngameScript
                         
                         break;
                     case "docking_request_granted":
-                        //AcceptDockingClearance();
                         this.Docking.ProcessClearance();
                         break;
                     case "":
@@ -318,7 +310,6 @@ namespace IngameScript
                 Vector3D.TryParse(vectorStrings[0], out dockingConnectorOrientation);
                 Vector3D.TryParse(vectorStrings[1], out ApproachPath[0]);
                 Vector3D.TryParse(vectorStrings[2], out ApproachPath[1]);
-                ApproachPath[1] = ApproachPath[1] + 0.25 * DockingConnector.WorldMatrix.Backward;
 
                 DockingClearanceReceived = true;
             }

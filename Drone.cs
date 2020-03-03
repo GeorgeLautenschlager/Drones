@@ -60,7 +60,7 @@ namespace IngameScript
                 this.ManeuverService = new ManeuverService(this.Program, Remote, this);
 
                 Program.Echo("Drone Initialized");
-                LogToLcd("Drone=" + Program.Me.EntityId.ToString());
+                //LogToLcd("Drone=" + Program.Me.EntityId.ToString());
             }
 
             private void InitializeBrain()
@@ -76,24 +76,24 @@ namespace IngameScript
 
             private void InitializeBlocks()
             {
-                Grid().GetBlocksOfType<IMyGyro>(Gyros);
+                Grid().GetBlocksOfType<IMyGyro>(Gyros, block => block.IsSameConstructAs(Program.Me));
                 if (Gyros == null || Gyros.Count == 0)
                     throw new Exception("Drone has no Gyros!");
                 
-                Grid().GetBlocksOfType<IMyThrust>(Thrusters);
+                Grid().GetBlocksOfType<IMyThrust>(Thrusters, block => block.IsSameConstructAs(Program.Me));
                 if (Thrusters == null || Thrusters.Count == 0)
                     throw new Exception("Drone has no Thrusters!");
 
-                Grid().GetBlocksOfType<IMyBatteryBlock>(Batteries);
+                Grid().GetBlocksOfType<IMyBatteryBlock>(Batteries, block => block.IsSameConstructAs(Program.Me));
                 if (Batteries == null || Batteries.Count == 0)
                     throw new Exception("Drone has no Batteries!");
 
-                Grid().GetBlocksOfType<IMyGasTank>(FuelTanks);
+                Grid().GetBlocksOfType<IMyGasTank>(FuelTanks, block => block.IsSameConstructAs(Program.Me));
                 if (FuelTanks == null || FuelTanks.Count == 0)
                     throw new Exception("Drone has no Fuel Tanks!");
 
                 InventoryBlocks = new List<IMyTerminalBlock>();
-                Grid().GetBlocksOfType<IMyTerminalBlock>(InventoryBlocks, block => block.InventoryCount > 0);
+                Grid().GetBlocksOfType<IMyTerminalBlock>(InventoryBlocks, block => block.InventoryCount > 0 && block.IsSameConstructAs(Program.Me));
 
                 foreach(IMyTerminalBlock block in InventoryBlocks)
                 {
