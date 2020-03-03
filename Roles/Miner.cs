@@ -167,12 +167,11 @@ namespace IngameScript
                         if (Move == null)
                             Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[1] }), DockingConnector, true);
 
-                        if (Move.Perform())
+                        if (Move.Perform() || DockingConnector.Status == MyShipConnectorStatus.Connected)
                         {
                             Move = null;
                             this.State = 8;
                         }
-
                         DockingConnector.Connect();
                         break;
                     case 8:
