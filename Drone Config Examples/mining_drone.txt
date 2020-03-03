@@ -2,9 +2,9 @@
 departure_point={X:-87.09 Y:-11.01 Z:18.53}
 mining_site={X:-468.3 Y:194.6 Z:-453.68}
 initial_state=0
-home_address=111967902350718416
+foreman_address=142828164750751520
 manual_mining=true
-manual_site_approach=true
+manual_site_approach=false
 compute_departure_point=true
 
 

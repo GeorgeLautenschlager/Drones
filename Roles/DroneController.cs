@@ -23,17 +23,27 @@ namespace IngameScript
     {
         public class DroneController : Role
         {
+            private long MinerAddress;
             public string Channel { get; private set; }
 
             public DroneController(MyIni config)
             {
-                
+                string rawValue = config.Get(Name(), "miner_address").ToString();
+                if (rawValue != null && rawValue != "")
+                {
+                    Int64.TryParse(rawValue, out MinerAddress);
+                }
+                else
+                {
+                    throw new Exception("Drone has no address for its Miner!");
+                }
             }
             public override void InitWithDrone(Drone drone)
             {
-                this.Drone = drone;
-                this.Drone.ListenToChannel(DockingRequestChannel);
-                this.Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_pending");
+                Drone = drone;
+                Drone.ListenToChannel(DockingRequestChannel);
+                Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_pending");
+                Drone.Program.IGC.UnicastListener.SetMessageCallback("unicast");
             }
 
 
@@ -74,8 +84,37 @@ namespace IngameScript
             {
                 switch (callback)
                 {
+                    case "unicast":
+                        // We only support one Unicast for now
+                        Drone.LogToLcd($"\nProcessing Docking Request: {DateTime.Now}");
+                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
+
+                        if (message.Data == null)
+                            Drone.LogToLcd($"\nNo Message");
+
+                        IMyShipConnector dockingPort = Drone.Grid().GetBlockWithName("Docking Port 1") as IMyShipConnector;
+
+                        if (dockingPort == null)
+                        {
+                            Drone.LogToLcd("\nDocking Port 1 not found.");
+                        }
+                        else
+                        {
+                            MyTuple<Vector3D, Vector3D> payload = new MyTuple<Vector3D, Vector3D>();
+                            payload.Item1 = dockingPort.GetPosition() + dockingPort.WorldMatrix.Forward * 50;
+                            payload.Item2 = dockingPort.GetPosition();
+
+                            Drone.LogToLcd($"\nClearance granted: {message.Source}");
+                            Drone.Program.IGC.SendUnicastMessage(message.Source, DockingRequestChannel, payload);
+                        }
+
+                        break;
                     case "docking_request_pending":
                         ProcessDockingRequest();
+                        break;
+                    case "recall":
+                        Drone.LogToLcd("Recalling drones");
+                        Drone.Program.IGC.SendUnicastMessage(MinerAddress, "recall", "recall");
                         break;
                     case "":
                         // Just Ignore empty arguments

@@ -47,7 +47,7 @@ namespace IngameScript
             private Vector3D MiningSite;
             private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
             private Vector3D dockingConnectorOrientation;
-            public long DroneControllerEntityId;
+            public long ForemanAddress;
             private bool DockingClearanceReceived = false;
             private bool ManualMining;
             private bool ManualSiteApproach;
@@ -71,9 +71,10 @@ namespace IngameScript
                 if (connectors == null || connectors.Count == 0)
                     throw new Exception("No docking connector found!");
 
-                this.DockingConnector = connectors.First();
-                this.Drone.ListenToChannel(DockingRequestChannel);
-                this.Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_granted");
+                DockingConnector = connectors.First();
+                Drone.ListenToChannel(DockingRequestChannel);
+                Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_granted");
+                Drone.Program.IGC.UnicastListener.SetMessageCallback("unicast");
             }
 
             public override void Perform()
@@ -134,7 +135,10 @@ namespace IngameScript
                         // Since Mining is a manual process ATM, the drone is asleep in the previous state.
                         Drone.Wake();
                         // Request Docking Clearance and wait
-                        Drone.NetworkService.BroadcastMessage(DockingRequestChannel, "Requesting Docking Clearance");
+                        //Drone.NetworkService.BroadcastMessage(DockingRequestChannel, "Requesting Docking Clearance");
+                        //Drone.NetworkService.UnicastMessage(ForemanAddress, DockingRequestChannel, "Requesting Docking Clearance");
+                        Drone.LogToLcd($"\nRequesting Docking Clearance");
+                        Drone.Program.IGC.SendUnicastMessage(ForemanAddress, DockingRequestChannel, "Requesting Docking Clearance");
                         this.State = 5;
                         break;
                     case 5:
@@ -151,39 +155,39 @@ namespace IngameScript
                         }
                         break;
                     case 6:
-                        // Moving to Docking Approach point
-                        Drone.Log("Flying to Docking Approach.");
-                        if (Drone.FlyTo(ApproachPath[0], Drone.Remote))
+                        Drone.Log($"\nProceeding to docking approach");
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[0] }), Drone.Remote, true);
+
+                        if (Move.Perform())
                         {
+                            Move = null;
                             this.State = 7;
                         }
                         break;
                     case 7:
-                        //Align to Docking port
-                        if (Drone.ManeuverService.AlignBlockTo(ApproachPath[1], DockingConnector))
-                            this.State = 8;
-                        break;
-                    case 8:
-                        // Final Approach
                         DockingConnector.Enabled = true;
-
-
+                        Drone.Log($"\nOn Final Approach");
                         //=================================
                         //TODO:  use the connectors bounding box to compute an offset?
                         //=================================
 
-                        if (Drone.FlyTo(ApproachPath[1], DockingConnector))
-                        {
-                            // activate connector and lock
-                            DockingConnector.Connect();
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[1] }), DockingConnector, true);
 
-                            if (DockingConnector.Status == MyShipConnectorStatus.Connected)
-                            {
-                                // Force deactivation of autopilot. We've made contact, our position doesn't matter anymore
-                                Drone.AllStop();
-                                this.State = 9;
-                            }
+                        if (Move.Perform())
+                        {
+                            Move = null;
+                            this.State = 8;
                         }
+                        break;
+                    case 8:
+                        if (DockingConnector.Status == MyShipConnectorStatus.Connected)
+                        {
+                            this.State = 9;
+                        }
+
+                        DockingConnector.Connect();
                         break;
                     case 9:
                         Drone.Shutdown();
@@ -229,16 +233,15 @@ namespace IngameScript
                 if (!Vector3D.TryParse(rawValue, out MiningSite))
                     throw new Exception($"Unable to parse: {rawValue} as mining site");
 
-                // TODO: switch to Unicasts
-                //rawValue = config.Get(Name(), "home_address").ToString();
-                //if (rawValue != null && rawValue != "")
-                //{
-                //    Int64.TryParse(rawValue, out DroneControllerEntityId);
-                //}
-                //else
-                //{
-                //    throw new Exception("Drone has no home address!");
-                //}
+                rawValue = config.Get(Name(), "foreman_address").ToString();
+                if (rawValue != null && rawValue != "")
+                {
+                    Int64.TryParse(rawValue, out ForemanAddress);
+                }
+                else
+                {
+                    throw new Exception("Drone has no address for its foreman!");
+                }
 
                 rawValue = config.Get(Name(), "initial_state").ToString();
                 if (rawValue != null && rawValue != "")
@@ -259,6 +262,30 @@ namespace IngameScript
             {
                 switch (callback)
                 {
+                    case "unicast":
+                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
+                        if (message.Data == null)
+                            Drone.LogToLcd($"\nNo Message");
+
+                        if (message.Tag == DockingRequestChannel)
+                        {
+                            MyTuple<Vector3D, Vector3D> messageTuple = (MyTuple<Vector3D, Vector3D>)message.Data;
+                            ApproachPath[0] = messageTuple.Item1;
+                            ApproachPath[1] = messageTuple.Item2;
+                            DockingClearanceReceived = true;
+                        }
+                        else if (message.Tag == "recall")
+                        {
+                            Drone.LogToLcd("Returning to Base!");
+                            this.State = 4;
+                        }
+                        else
+                        {
+                            Drone.LogToLcd($"{message.Tag} is not a recognized message format.");
+                        }
+
+                        
+                        break;
                     case "docking_request_granted":
                         //AcceptDockingClearance();
                         this.Docking.ProcessClearance();
@@ -291,18 +318,7 @@ namespace IngameScript
                 Vector3D.TryParse(vectorStrings[0], out dockingConnectorOrientation);
                 Vector3D.TryParse(vectorStrings[1], out ApproachPath[0]);
                 Vector3D.TryParse(vectorStrings[2], out ApproachPath[1]);
-
-                // Centre of Mass Offset math
-                //double offsetLength = (Remote().GetPosition() - Remote().CenterOfMass).Length();
-                //Vector3D offsetDirection = Vector3D.Normalize(Remote().GetPosition() - ApproachPath[0]);
-                //Vector3D connectorOffset = offsetLength * offsetDirection;
-                //ApproachPath[0] = ApproachPath[0] + connectorOffset;
-
-                // Connector Offset math
-                //offsetLength = (Remote().GetPosition() - DockingConnector.GetPosition()).Length();
-                //offsetDirection = Vector3D.Normalize(dockingConnectorOrientation);
-                //connectorOffset = offsetLength * offsetDirection;
-                //ApproachPath[1] = ApproachPath[1] + connectorOffset;
+                ApproachPath[1] = ApproachPath[1] + 0.25 * DockingConnector.WorldMatrix.Backward;
 
                 DockingClearanceReceived = true;
             }
