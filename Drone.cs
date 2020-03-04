@@ -172,44 +172,6 @@ namespace IngameScript
             {
                 Program.Runtime.UpdateFrequency = UpdateFrequency.Once;
             }
-            
-            // Begin moving to destination
-            public void Move(Vector3D destination, string destinationName, bool dockingMode, Base6Directions.Direction direction = Base6Directions.Direction.Forward)
-            {
-                Remote.ClearWaypoints();
-                Remote.FlightMode = FlightMode.OneWay;
-                Remote.Direction = direction;
-                Remote.SetDockingMode(dockingMode);
-                Remote.SpeedLimit = DEFAULT_SPEED_LIMIT;
-                Remote.AddWaypoint(destination, destinationName);
-                Remote.SetAutoPilotEnabled(true);
-            }
-
-            // Oversee a move to the given destination, return true when it's done
-            public bool Moving(Vector3D destination, bool docking)
-            {
-                double distance = Vector3D.Distance(Remote.GetPosition(), destination);
-                bool moveComplete = false;
-
-                if (distance < 1)
-                {
-                    Remote.SetAutoPilotEnabled(false);
-                    Remote.SpeedLimit = DEFAULT_SPEED_LIMIT;
-                    moveComplete = true;
-                }
-                else
-                {
-                    // If docking, speed limit should decrease rapidly with distance
-                    double speedLimit = Math.Pow(distance, 1/2.1);
-                    // If not docking, then we can apply a mulitplier proportional to the order of magnitude of distance
-                    if (docking == false && distance > 2000)
-                        speedLimit *= Math.Log(distance);
-                    //Don't apply speed limits outside of this valid range
-                    Remote.SpeedLimit = (float)MathHelper.Clamp(speedLimit, 1, 100);
-                }
-
-                return moveComplete;
-            }
 
             //Set up a Broadcast listener and callback so this drone can respond to messages on the given channel.
             public void ListenToChannel(string channel)
@@ -274,7 +236,7 @@ namespace IngameScript
                 }
             }
         
-            public bool FlyTo(Vector3D position, IMyTerminalBlock reference)
+            public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool align)
             {
                 Vector3D translationVector = position - reference.GetPosition();
 
@@ -300,17 +262,17 @@ namespace IngameScript
                 //X
                 directionVector = new Vector3D(Remote.WorldMatrix.Right);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
-                this.ManeuverService.SetThrust(projection);
+                this.ManeuverService.SetThrust(projection, align);
 
                 //Z
                 directionVector = new Vector3D(Remote.WorldMatrix.Down);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
-                this.ManeuverService.SetThrust(projection);
+                this.ManeuverService.SetThrust(projection, align);
 
                 //Y
                 directionVector = new Vector3D(Remote.WorldMatrix.Forward);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
-                this.ManeuverService.SetThrust(projection);
+                this.ManeuverService.SetThrust(projection, align);
 
                 return false;
             }

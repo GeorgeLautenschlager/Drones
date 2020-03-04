@@ -28,7 +28,6 @@ namespace IngameScript
             private Queue<Vector3D> Waypoints;
             private IMyTerminalBlock ReferenceBlock;
             private bool Align;
-            private bool Aligned;
 
             // 0:initial, 1: aligning, 2: Moving, 3: Both
             int State;
@@ -37,7 +36,6 @@ namespace IngameScript
             {
                 this.Drone = drone;
                 this.ReferenceBlock = referenceBlock;
-                this.Aligned = align;
                 this.Waypoints = waypoints;
                 this.State = 0;
                 this.Align = align;
@@ -72,7 +70,7 @@ namespace IngameScript
 
                     case 2:
                         Drone.Log("Translating");
-                        if (Drone.FlyTo(CurrentWaypoint, ReferenceBlock))
+                        if (Drone.FlyTo(CurrentWaypoint, ReferenceBlock, Align))
                         {
                             this.State = 3;
                         }
