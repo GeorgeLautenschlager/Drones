@@ -56,7 +56,11 @@ namespace IngameScript
 
                 InitializeBrain();
                 InitializeBlocks();
-                CallbackLog = Grid().GetBlockWithName("callback_log") as IMyTextPanel;
+
+                List<IMyTextPanel> lcds = new List<IMyTextPanel>();
+                Grid().GetBlocksOfType<IMyTextPanel>(lcds, rc => rc.CustomName == "callback_log" && rc.IsSameConstructAs(Program.Me));
+                CallbackLog = lcds.First();
+
                 this.ManeuverService = new ManeuverService(this.Program, Remote, this);
 
                 Program.Echo("Drone Initialized");
@@ -106,8 +110,6 @@ namespace IngameScript
 
             public void Perform()
             {
-                Wake();
-
                 foreach (Role role in Roles)
                 {
                     role.Perform();
@@ -170,7 +172,7 @@ namespace IngameScript
 
             public void Sleep()
             {
-                Program.Runtime.UpdateFrequency = UpdateFrequency.Once;
+                Program.Runtime.UpdateFrequency = UpdateFrequency.None;
             }
 
             //Set up a Broadcast listener and callback so this drone can respond to messages on the given channel.

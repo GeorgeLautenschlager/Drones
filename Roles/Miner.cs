@@ -71,7 +71,7 @@ namespace IngameScript
                 if (connectors == null || connectors.Count == 0)
                     throw new Exception("No docking connector found!");
 
-                DockingConnector = connectors.First();
+                DockingConnector = connectors.First(); 
                 Drone.ListenToChannel(DockingRequestChannel);
                 Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_granted");
                 Drone.Program.IGC.UnicastListener.SetMessageCallback("unicast");
@@ -85,6 +85,7 @@ namespace IngameScript
                 {
                     case 0:
                         // Startup and Depart
+                        Drone.Wake();
                         Drone.Startup();
                         DockingConnector.Disconnect();
                         DockingConnector.Enabled = false;
@@ -126,6 +127,8 @@ namespace IngameScript
                     case 3:
                         if (ManualMining)
                         {
+                            Drone.LogToLcd("Sleeping");
+                            Drone.Program.IGC.SendUnicastMessage(ForemanAddress, "Notifications", "I have arrived at the mining site");
                             Drone.Sleep();
                             return;
                         }
@@ -280,6 +283,10 @@ namespace IngameScript
                         break;
                     case "docking_request_granted":
                         this.Docking.ProcessClearance();
+                        break;
+                    case "launch":
+                        this.State = 0;
+                        Drone.Wake();
                         break;
                     case "":
                         // Just Ignore empty arguments

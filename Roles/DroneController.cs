@@ -24,6 +24,7 @@ namespace IngameScript
         public class DroneController : Role
         {
             private long MinerAddress;
+            IMySoundBlock DroneKlaxon;
             public string Channel { get; private set; }
 
             public DroneController(MyIni config)
@@ -44,6 +45,11 @@ namespace IngameScript
                 Drone.ListenToChannel(DockingRequestChannel);
                 Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_pending");
                 Drone.Program.IGC.UnicastListener.SetMessageCallback("unicast");
+
+                List<IMySoundBlock> soundBlocks = new List<IMySoundBlock>();
+                Drone.Grid().GetBlocksOfType<IMySoundBlock>(soundBlocks, rc => rc.CustomName == "Drone Klaxon" && rc.IsSameConstructAs(Drone.Program.Me));
+                DroneKlaxon = soundBlocks.First();
+                DroneKlaxon.LoopPeriod = 2f;
             }
 
 
@@ -85,30 +91,37 @@ namespace IngameScript
                 switch (callback)
                 {
                     case "unicast":
-                        // We only support one Unicast for now
-                        Drone.LogToLcd($"\nProcessing Docking Request: {DateTime.Now}");
                         MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
 
                         if (message.Data == null)
                             Drone.LogToLcd($"\nNo Message");
 
-                        IMyShipConnector dockingPort = Drone.Grid().GetBlockWithName("Docking Port 1") as IMyShipConnector;
-
-                        if (dockingPort == null)
+                        if (message.Tag == DockingRequestChannel)
                         {
-                            Drone.LogToLcd("\nDocking Port 1 not found.");
+                            IMyShipConnector dockingPort = Drone.Grid().GetBlockWithName("Docking Port 1") as IMyShipConnector;
+
+                            if (dockingPort == null)
+                            {
+                                Drone.LogToLcd("\nDocking Port 1 not found.");
+                            }
+                            else
+                            {
+                                MyTuple<Vector3D, Vector3D, Vector3D> payload = new MyTuple<Vector3D, Vector3D, Vector3D>();
+                                payload.Item1 = dockingPort.GetPosition() + dockingPort.WorldMatrix.Forward * 40;
+                                payload.Item2 = dockingPort.GetPosition() + 1.5 * dockingPort.WorldMatrix.Forward;
+
+                                Drone.LogToLcd($"\nClearance granted: {message.Source}");
+                                Drone.LogToLcd($"\nApproach: {payload.Item1.ToString()}");
+                                Drone.LogToLcd($"\nDocking Port: { payload.Item2.ToString()}");
+
+                                Drone.Program.IGC.SendUnicastMessage(message.Source, DockingRequestChannel, payload);
+                            }
                         }
-                        else
+                        else if (message.Tag == "Notifications")
                         {
-                            MyTuple<Vector3D, Vector3D, Vector3D> payload = new MyTuple<Vector3D, Vector3D, Vector3D>();
-                            payload.Item1 = dockingPort.GetPosition() + dockingPort.WorldMatrix.Forward * 40;
-                            payload.Item2 = dockingPort.GetPosition() + 1.5 * dockingPort.WorldMatrix.Forward;
-
-                            Drone.LogToLcd($"\nClearance granted: {message.Source}");
-                            Drone.LogToLcd($"\nApproach: {payload.Item1.ToString()}");
-                            Drone.LogToLcd($"\nDocking Port: { payload.Item2.ToString()}");
-
-                            Drone.Program.IGC.SendUnicastMessage(message.Source, DockingRequestChannel, payload);
+                            Drone.LogToLcd($"Received notification:{message.Data.ToString()}");
+                            DroneKlaxon.LoopPeriod = 2f;
+                            DroneKlaxon.Play();
                         }
 
                         break;
@@ -118,6 +131,15 @@ namespace IngameScript
                     case "recall":
                         Drone.LogToLcd("Recalling drones");
                         Drone.Program.IGC.SendUnicastMessage(MinerAddress, "recall", "recall");
+                        break;
+                    case "deploy":
+                        Drone.LogToLcd("Launching drones");
+                        IMyProgrammableBlock miner = Drone.Grid().GetBlockWithName("1A Control(D)") as IMyProgrammableBlock;
+                        miner.TryRun("launch");
+                        break;
+                    case "echo":
+                        Drone.LogToLcd("Echo");
+                        DroneKlaxon.Play();
                         break;
                     case "":
                         // Just Ignore empty arguments
