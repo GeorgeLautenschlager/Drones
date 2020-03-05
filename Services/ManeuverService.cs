@@ -88,7 +88,7 @@ namespace IngameScript
                     decayFactor = 2.1;
 
                 double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 1, Math.Pow(deltaV.Length(), decayFactor));
-
+                Drone.LogToLcd($"{direction.ToString()} {acceleration.ToString()}m/s/s\n");
                 double force = Remote.CalculateShipMass().TotalMass * acceleration;
 
                 foreach (IMyThrust thruster in Thrusters[direction])

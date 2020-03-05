@@ -238,6 +238,7 @@ namespace IngameScript
         
             public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool align)
             {
+                LogToLcd($"{DateTime.Now}");
                 Vector3D translationVector = position - reference.GetPosition();
 
                 Log($"D: {translationVector.Length()}");
@@ -250,7 +251,7 @@ namespace IngameScript
                 Vector3D targetVelocity = Vector3D.Normalize(translationVector) * Math.Pow(translationVector.Length(), 1 / 2.1);
                 Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
 
-                Log($"DeltaV: {velocityDelta.Length()}");
+                LogToLcd($"dV: {velocityDelta.Length()}\n");
                 if (velocityDelta.Length() < MathHelper.Clamp(translationVector.Length()/1000, 0.25, 5))
                     return false;
 
@@ -262,18 +263,21 @@ namespace IngameScript
                 //X
                 directionVector = new Vector3D(Remote.WorldMatrix.Right);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
+                LogToLcd($"dVx: {projection.Length()}m/s");
                 this.ManeuverService.SetThrust(projection, align);
 
                 //Z
                 directionVector = new Vector3D(Remote.WorldMatrix.Down);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
+                LogToLcd($"dVz: {projection.Length()}m/s");
                 this.ManeuverService.SetThrust(projection, align);
 
                 //Y
                 directionVector = new Vector3D(Remote.WorldMatrix.Forward);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
+                LogToLcd($"dVy: {projection.Length()}m/s");
                 this.ManeuverService.SetThrust(projection, align);
-
+                LogToLcd($"{DateTime.Now}\n\n");
                 return false;
             }
 
