@@ -260,24 +260,25 @@ namespace IngameScript
                 Vector3D projection;
                 Vector3D directionVector;
 
-                //X
-                directionVector = new Vector3D(Remote.WorldMatrix.Right);
-                projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
-                LogToLcd($"dVx: {projection.Length()}m/s");
-                this.ManeuverService.SetThrust(projection, align);
-
-                //Z
+                //Z (Forward and Backward)
                 directionVector = new Vector3D(Remote.WorldMatrix.Down);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
                 LogToLcd($"dVz: {projection.Length()}m/s");
                 this.ManeuverService.SetThrust(projection, align);
 
-                //Y
+                //X (Up and Down)
+                directionVector = new Vector3D(Remote.WorldMatrix.Right);
+                projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
+                LogToLcd($"dVx: {projection.Length()}m/s");
+                this.ManeuverService.SetThrust(projection, align);
+
+                //Y (Left and Right
                 directionVector = new Vector3D(Remote.WorldMatrix.Forward);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
                 LogToLcd($"dVy: {projection.Length()}m/s");
                 this.ManeuverService.SetThrust(projection, align);
                 LogToLcd($"{DateTime.Now}\n\n");
+
                 return false;
             }
 

@@ -85,7 +85,7 @@ namespace IngameScript
 
                 double decayFactor = 0.8;
                 if (align && direction != Base6Directions.Direction.Forward || direction != Base6Directions.Direction.Backward)
-                    decayFactor = 0.476;
+                    decayFactor = 0.25;
 
                 double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 0.1, Math.Pow(deltaV.Length(), decayFactor));
                 Drone.LogToLcd($"{direction.ToString()} {acceleration.ToString()}m/s/s\n");
