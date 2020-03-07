@@ -40,11 +40,13 @@ namespace IngameScript
             */
             
             private IMyShipConnector DockingConnector;
+            private List<IMyShipDrill> Drills = new List<IMyShipDrill>();
 
             private Vector3D DeparturePoint;
             // TODO: this will need to be a lot more complex, but for now the actual mining will be manual,
             // the drone just needs to fly to the mining site.
             private Vector3D MiningSite;
+            private Vector3D TunnelEnd;
             private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
             private Vector3D dockingConnectorOrientation;
             public long ForemanAddress;
@@ -52,7 +54,6 @@ namespace IngameScript
             private bool ManualMining;
             private bool ManualSiteApproach;
             private bool ComputeDeparturePoint;
-            private List<IMyShipDrill> Drills = new List<IMyShipDrill>();
             private DockingAttempt Docking;
             private Move Move;
 
@@ -70,6 +71,10 @@ namespace IngameScript
                 Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
                 if (connectors == null || connectors.Count == 0)
                     throw new Exception("No docking connector found!");
+
+                Drone.Grid().GetBlocksOfType(Drills);
+                if (Drills == null || Drills.Count == 0)
+                    throw new Exception("Miner is missing drills!");
 
                 DockingConnector = connectors.First(); 
                 Drone.ListenToChannel(DockingRequestChannel);
@@ -93,7 +98,7 @@ namespace IngameScript
 
                         if(ComputeDeparturePoint)
                         {
-                            DeparturePoint = DockingConnector.GetPosition() + 10 * DockingConnector.WorldMatrix.Backward;
+                            DeparturePoint = DockingConnector.GetPosition() + 15 * DockingConnector.WorldMatrix.Backward;
                         }
                         this.State = 1;
                         break;
@@ -125,12 +130,32 @@ namespace IngameScript
                         }
                         break;
                     case 3:
+                        Drone.Log("Mining");
                         if (ManualMining)
                         {
                             Drone.LogToLcd("Sleeping");
                             Drone.Program.IGC.SendUnicastMessage(ForemanAddress, "Notifications", "I have arrived at the mining site");
                             Drone.Sleep();
                             return;
+                        }
+                        else
+                        {
+                            //TODO: introduce Tunnel, CargoService and speed limit in Move
+                            Drone.Log("Automated");
+                            if (Move == null)
+                            {
+                                Drone.Log("Beginning Excavation");
+                                ActivateDrills();
+                                Move = new Move(Drone, new Queue<Vector3D>(new[] { TunnelEnd }), Drone.Remote, true);
+                            }
+
+                            if (Move.Perform())
+                            {
+                                Drone.Log("Excavating tunnel");
+                                Move = null;
+                                DeactivateDrills();
+                                this.State = 4;
+                            }
                         }
                         break;
                     case 4:
@@ -194,12 +219,7 @@ namespace IngameScript
 
             public void ActivateDrills()
             {
-                if(Drills == null)
-                {
-                    Drone.Grid().GetBlocksOfType<IMyShipDrill>(Drills);
-                }
-
-                foreach(IMyShipDrill drill in Drills)
+                foreach (IMyShipDrill drill in Drills)
                 {
                     drill.Enabled = true;
                 }
@@ -207,11 +227,6 @@ namespace IngameScript
 
             public void DeactivateDrills()
             {
-                if (Drills == null)
-                {
-                    Drone.Grid().GetBlocksOfType<IMyShipDrill>(Drills);
-                }
-
                 foreach (IMyShipDrill drill in Drills)
                 {
                     drill.Enabled = false;
@@ -228,6 +243,10 @@ namespace IngameScript
                 rawValue = config.Get(Name(), "mining_site").ToString();
                 if (!Vector3D.TryParse(rawValue, out MiningSite))
                     throw new Exception($"Unable to parse: {rawValue} as mining site");
+
+                rawValue = config.Get(Name(), "tunnel_end").ToString();
+                if (!Vector3D.TryParse(rawValue, out TunnelEnd))
+                    throw new Exception($"Unable to parse: {rawValue} as tunnel end");
 
                 rawValue = config.Get(Name(), "foreman_address").ToString();
                 if (rawValue != null && rawValue != "")
@@ -287,6 +306,10 @@ namespace IngameScript
                     case "launch":
                         this.State = 0;
                         Drone.Wake();
+                        break;
+                    case "activate":
+                        // TODO: remove this diagnostic code
+                        ActivateDrills();
                         break;
                     case "":
                         // Just Ignore empty arguments
