@@ -57,7 +57,6 @@ namespace IngameScript
 
             public override void Perform()
             {
-                Drone.LogToLcd($"My Address is: {Drone.Program.Me.EntityId.ToString()}");
                 if (!UseCallbacks)
                 {
                     if(Drone.NetworkService.GetUnicastListener().HasPendingMessage)

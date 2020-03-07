@@ -1,0 +1,3 @@
+﻿[drone_controller]
+miner_address=96253436871717027
+miner_address=102843884084069822

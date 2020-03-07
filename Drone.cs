@@ -99,11 +99,14 @@ namespace IngameScript
                 InventoryBlocks = new List<IMyTerminalBlock>();
                 Grid().GetBlocksOfType<IMyTerminalBlock>(InventoryBlocks, block => block.InventoryCount > 0 && block.IsSameConstructAs(Program.Me));
 
-                foreach(IMyTerminalBlock block in InventoryBlocks)
+                if (InventoryBlocks != null && InventoryBlocks.Count > 1)
                 {
-                    for (int i = 0; i < block.InventoryCount; i++)
+                    foreach (IMyTerminalBlock block in InventoryBlocks)
                     {
-                        MaxCargo += block.GetInventory(i).MaxVolume;
+                        for (int i = 0; i < block.InventoryCount; i++)
+                        {
+                            MaxCargo += block.GetInventory(i).MaxVolume;
+                        }
                     }
                 }
             }

@@ -25,10 +25,15 @@ namespace IngameScript
         {
             private long MinerAddress;
             IMySoundBlock DroneKlaxon;
+            Vector3D DepositCentre;
+            Vector3D DepositNormal;
+            double DepositDepth;
+
             public string Channel { get; private set; }
 
             public DroneController(MyIni config)
             {
+                // TODO: move to proper ParseInit method
                 string rawValue = config.Get(Name(), "miner_address").ToString();
                 if (rawValue != null && rawValue != "")
                 {
@@ -37,6 +42,36 @@ namespace IngameScript
                 else
                 {
                     throw new Exception("Drone has no address for its Miner!");
+                }
+
+                rawValue = config.Get(Name(), "deposit_centre").ToString();
+                if (rawValue != null && rawValue != "")
+                {
+                    Vector3D.TryParse(rawValue, out DepositCentre);
+                }
+                else
+                {
+                    throw new Exception("Deposit Centre not set");
+                }
+
+                rawValue = config.Get(Name(), "deposit_normal").ToString();
+                if (rawValue != null && rawValue != "")
+                {
+                    Vector3D.TryParse(rawValue, out DepositNormal);
+                }
+                else
+                {
+                    throw new Exception("Deposit Normal not set");
+                }
+
+                rawValue = config.Get(Name(), "deposit_depth").ToString();
+                if (rawValue != null && rawValue != "")
+                {
+                    Double.TryParse(rawValue, out DepositDepth);
+                }
+                else
+                {
+                    throw new Exception("Deposit Centre not set");
                 }
             }
             public override void InitWithDrone(Drone drone)
@@ -134,7 +169,29 @@ namespace IngameScript
                         break;
                     case "deploy":
                         Drone.LogToLcd("Launching drones");
-                        IMyProgrammableBlock miner = Drone.Grid().GetBlockWithName("1A Control(D)") as IMyProgrammableBlock;
+
+                        List<IMyProgrammableBlock> miners = new List<IMyProgrammableBlock>();
+                        Drone.Grid().GetBlocksOfType(miners, pb => MyIni.HasSection(pb.CustomData, "miner"));
+
+                        //We only support one miner for now
+                        // Set the deposit details in the miners config
+                        IMyProgrammableBlock miner = miners.First();
+                        MyIni minerConfig = new MyIni();
+                        MyIniParseResult result;
+                        if (!minerConfig.TryParse(miner.CustomData, out result))
+                        {
+                            Drone.LogToLcd(miner.CustomData);
+                            throw new Exception($"Error parsing config: {result.ToString()}");
+                        }
+
+                        Vector3D MiningSite = DepositCentre + 25 * Vector3D.Normalize(DepositNormal);
+                        minerConfig.Set("miner", "mining_site", MiningSite.ToString());
+
+                        Vector3D TunnelEnd = DepositCentre - DepositDepth * Vector3D.Normalize(DepositNormal);
+                        minerConfig.Set("miner", "tunnel_end", TunnelEnd.ToString());
+
+                        miner.CustomData = minerConfig.ToString();
+
                         miner.TryRun("launch");
                         break;
                     case "echo":

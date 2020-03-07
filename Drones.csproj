@@ -64,8 +64,10 @@
     <Compile Include="Roles\Role.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Drone Config Examples\foreman.txt" />
     <Content Include="Drone Config Examples\mining_drone.txt" />
     <Content Include="Drone Config Examples\network_tester.txt" />
+    <Content Include="Drone Config Examples\drone_controller.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">

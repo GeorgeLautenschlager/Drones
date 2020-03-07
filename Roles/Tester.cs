@@ -39,85 +39,32 @@ namespace IngameScript
 
             public override void InitWithDrone(Drone drone)
             {
-                this.Drone = drone;
+                Drone = drone;
+
                 List<IMyShipConnector> connectors = new List<IMyShipConnector>();
                 Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
                 if (connectors == null || connectors.Count == 0)
                     throw new Exception("No docking connector found!");
 
-                this.DockingConnector = connectors.First();
+                DockingConnector = connectors.First();
 
-                this.State = 0;
+                State = 0;
             }
 
             public void ParseConfig(MyIni config)
             {
-
+                
             }
 
             public override void Perform()
             {
-                Drone.Log($"Tester Performing state: {this.State}");
-
-                switch (this.State)
-                {
-                    case 0:
-                        Drone.Startup();
-                        DockingConnector.Disconnect();
-                        DockingConnector.Enabled = false;
-                        Drone.OpenFuelTanks();
-
-                        MyWaypointInfo waypoint;
-                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141170.2:-72210.54:-61138.71:", out waypoint);
-                        Target = waypoint.Coords;
-
-                        Drone.Log("Starting Move");
-
-                        this.State = 1;
-                        break;
-                    case 1:
-                        Queue<Vector3D> path = new Queue<Vector3D>();
-                        path.Enqueue(Target);
-
-                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141270.2:-72210.54:-61138.71:", out waypoint);
-                        Target = waypoint.Coords;
-                        path.Enqueue(Target);
-
-                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141270.2:-72310.54:-61138.71:", out waypoint);
-                        Target = waypoint.Coords;
-                        path.Enqueue(Target);
-
-                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141170.2:-72310.54:-61138.71:", out waypoint);
-                        Target = waypoint.Coords;
-                        path.Enqueue(Target);
-
-                        MyWaypointInfo.TryParse("GPS:Test Marker #1:141170.2:-72210.54:-61138.71:", out waypoint);
-                        Target = waypoint.Coords;
-                        path.Enqueue(Target);
-
-                        Drone.Log("Setting Up Move");
-                        Move = new Move(this.Drone, path, Drone.Remote, true);
-
-                        this.State = 2;
-                        break;
-                    case 2:
-                        if (Move.Perform())
-                            this.State = 3;
-
-                        Drone.Log("Moving");
-                        break;
-                    case 3:
-                        Drone.AllStop();
-                        Drone.Sleep();
-
-                        Drone.Log("Shutting down");
-                        break;
-                }
+                Drone.LogToLcd("Deposit Centre: " + Drone.Remote.GetPosition());
+                Drone.LogToLcd("Deposit Normal: " + Drone.Remote.WorldMatrix.Backward);
             }
 
             public override string Name()
             {
-                return "Tester";
+                return "tester";
             }
         }
     }
