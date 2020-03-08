@@ -38,6 +38,7 @@ namespace IngameScript
             private List<IMyBatteryBlock> Batteries = new List<IMyBatteryBlock>();
             private List<IMyGasTank> FuelTanks = new List<IMyGasTank>();
             private List<IMyTerminalBlock> InventoryBlocks = new List<IMyTerminalBlock>();
+            public IMyShipConnector DockingConnector;
             public IMyRemoteControl Remote;
             public IMyTextPanel CallbackLog;
             public MyFixedPoint MaxCargo = 0;
@@ -95,6 +96,13 @@ namespace IngameScript
                 Grid().GetBlocksOfType<IMyGasTank>(FuelTanks, block => block.IsSameConstructAs(Program.Me));
                 if (FuelTanks == null || FuelTanks.Count == 0)
                     throw new Exception("Drone has no Fuel Tanks!");
+
+                List<IMyShipConnector> connectors = new List<IMyShipConnector>();
+                //TODO: make sure you don't grab a connector on the other grid
+                Grid().GetBlocksOfType(connectors, block => block.IsSameConstructAs(Program.Me));
+                if (connectors == null || connectors.Count == 0)
+                    throw new Exception("No docking connector found!");
+                DockingConnector = connectors.First();
 
                 InventoryBlocks = new List<IMyTerminalBlock>();
                 Grid().GetBlocksOfType<IMyTerminalBlock>(InventoryBlocks, block => block.InventoryCount > 0 && block.IsSameConstructAs(Program.Me));
@@ -241,7 +249,7 @@ namespace IngameScript
                 }
             }
         
-            public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool align)
+            public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool align, double speedLimit = -1)
             {
                 LogToLcd($"{DateTime.Now}");
                 Vector3D translationVector = position - reference.GetPosition();
@@ -253,7 +261,18 @@ namespace IngameScript
                     AllStop();
                     return true;
                 }
-                Vector3D targetVelocity = Vector3D.Normalize(translationVector) * Math.Pow(translationVector.Length(), 1 / 2.1);
+
+                double targetSpeed;
+                if (speedLimit == -1)
+                {
+                    targetSpeed = Math.Pow(translationVector.Length(), 1 / 2.1);
+                }
+                else
+                {
+                    targetSpeed = speedLimit;
+                }
+
+                Vector3D targetVelocity = Vector3D.Normalize(translationVector) * targetSpeed;
                 Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
 
                 LogToLcd($"dV: {velocityDelta.Length()}\n");

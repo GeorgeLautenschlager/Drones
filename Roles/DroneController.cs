@@ -184,7 +184,7 @@ namespace IngameScript
                             throw new Exception($"Error parsing config: {result.ToString()}");
                         }
 
-                        Vector3D MiningSite = DepositCentre + 25 * Vector3D.Normalize(DepositNormal);
+                        Vector3D MiningSite = DepositCentre + 10 * Vector3D.Normalize(DepositNormal);
                         minerConfig.Set("miner", "mining_site", MiningSite.ToString());
 
                         Vector3D TunnelEnd = DepositCentre - DepositDepth * Vector3D.Normalize(DepositNormal);

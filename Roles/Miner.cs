@@ -39,7 +39,6 @@ namespace IngameScript
             * 9:  Shutting down
             */
             
-            private IMyShipConnector DockingConnector;
             private List<IMyShipDrill> Drills = new List<IMyShipDrill>();
 
             private Vector3D DeparturePoint;
@@ -56,6 +55,7 @@ namespace IngameScript
             private bool ComputeDeparturePoint;
             private DockingAttempt Docking;
             private Move Move;
+            private Tunnel Tunnel;
 
             public Miner(MyIni config)
             {
@@ -66,20 +66,15 @@ namespace IngameScript
             {
                 this.Drone = drone;
 
-                List<IMyShipConnector> connectors = new List<IMyShipConnector>();
-                //TODO: make sure you don't grab a connector on the other grid
-                Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
-                if (connectors == null || connectors.Count == 0)
-                    throw new Exception("No docking connector found!");
-
                 Drone.Grid().GetBlocksOfType(Drills);
                 if (Drills == null || Drills.Count == 0)
                     throw new Exception("Miner is missing drills!");
 
-                DockingConnector = connectors.First(); 
                 Drone.ListenToChannel(DockingRequestChannel);
                 Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_granted");
                 Drone.Program.IGC.UnicastListener.SetMessageCallback("unicast");
+
+                Tunnel = new Tunnel(Drone, MiningSite, TunnelEnd);
             }
 
             public override void Perform()
@@ -92,13 +87,13 @@ namespace IngameScript
                         // Startup and Depart
                         Drone.Wake();
                         Drone.Startup();
-                        DockingConnector.Disconnect();
-                        DockingConnector.Enabled = false;
+                        Drone.DockingConnector.Disconnect();
+                        Drone.DockingConnector.Enabled = false;
                         Drone.OpenFuelTanks();
 
                         if(ComputeDeparturePoint)
                         {
-                            DeparturePoint = DockingConnector.GetPosition() + 15 * DockingConnector.WorldMatrix.Backward;
+                            DeparturePoint = Drone.DockingConnector.GetPosition() + 15 * Drone.DockingConnector.WorldMatrix.Backward;
                         }
                         this.State = 1;
                         break;
@@ -130,10 +125,8 @@ namespace IngameScript
                         }
                         break;
                     case 3:
-                        Drone.Log("Mining");
                         if (ManualMining)
                         {
-                            Drone.LogToLcd("Sleeping");
                             Drone.Program.IGC.SendUnicastMessage(ForemanAddress, "Notifications", "I have arrived at the mining site");
                             Drone.Sleep();
                             return;
@@ -142,19 +135,25 @@ namespace IngameScript
                         {
                             //TODO: introduce Tunnel, CargoService and speed limit in Move
                             Drone.Log("Automated");
-                            if (Move == null)
-                            {
-                                Drone.Log("Beginning Excavation");
-                                ActivateDrills();
-                                Move = new Move(Drone, new Queue<Vector3D>(new[] { TunnelEnd }), Drone.Remote, true);
-                            }
+                            //if (Move == null)
+                            //{
+                            //    Drone.Log("Beginning Excavation");
+                            //    ActivateDrills();
+                            //    Move = new Move(Drone, new Queue<Vector3D>(new[] { TunnelEnd }), Drone.Remote, true);
+                            //}
 
-                            if (Move.Perform())
+                            //if (Move.Perform())
+                            //{
+                            //    Drone.Log("Excavating tunnel");
+                            //    Move = null;
+                            //    DeactivateDrills();
+                            //    this.State = 4;
+                            //}
+                            ActivateDrills();
+                            if (Tunnel.Mine())
                             {
-                                Drone.Log("Excavating tunnel");
-                                Move = null;
-                                DeactivateDrills();
                                 this.State = 4;
+                                DeactivateDrills();
                             }
                         }
                         break;
@@ -186,29 +185,29 @@ namespace IngameScript
                         }
                         break;
                     case 7:
-                        DockingConnector.Enabled = true;
+                        Drone.DockingConnector.Enabled = true;
                         Drone.Log($"\nOn Final Approach");
                         //=================================
                         //TODO:  use the connectors bounding box to compute an offset?
                         //=================================
 
                         if (Move == null)
-                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[1] }), DockingConnector, true);
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[1] }), Drone.DockingConnector, true);
 
-                        if (Move.Perform() || DockingConnector.Status == MyShipConnectorStatus.Connected)
+                        if (Move.Perform() || Drone.DockingConnector.Status == MyShipConnectorStatus.Connected)
                         {
                             Move = null;
                             this.State = 8;
                         }
-                        DockingConnector.Connect();
+                        Drone.DockingConnector.Connect();
                         break;
                     case 8:
-                        if (DockingConnector.Status == MyShipConnectorStatus.Connected)
+                        if (Drone.DockingConnector.Status == MyShipConnectorStatus.Connected)
                         {
                             this.State = 9;
                         }
 
-                        DockingConnector.Connect();
+                        Drone.DockingConnector.Connect();
                         break;
                     case 9:
                         Drone.Shutdown();
