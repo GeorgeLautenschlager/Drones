@@ -1,14 +1,9 @@
 ﻿[miner]
 departure_point={X:-87.09 Y:-11.01 Z:18.53}
-mining_site={X:10.91 Y:-55.1 Z:-15.56}
-tunnel_end=
-initial_state=4
-foreman_address=142828164750751520
+mining_site={X:189410.503649776 Y:-95667.8397874909 Z:-67587.258625267}
+tunnel_end={X:189407.354962168 Y:-95662.0913062284 Z:-67616.5338832423}
+initial_state=0
+foreman_address=87876249704188211
 manual_mining=true
 manual_site_approach=false
 compute_departure_point=true
-
-
-
-Deposit Centre: {X:26.6246714444305 Y:-50.8025776492041 Z:-24.1014736869383}
-Deposit Normal: {X:-0.513000786304474 Y:0.290214270353317 Z:-0.80783998966217}

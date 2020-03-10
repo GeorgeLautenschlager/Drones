@@ -88,19 +88,22 @@ namespace IngameScript
                     decayFactor = 0.25;
 
                 double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 0.1, Math.Pow(deltaV.Length(), decayFactor));
-                Drone.LogToLcd($"{direction.ToString()} {acceleration.ToString()}m/s/s\n");
+                Drone.LogToLcd($"{direction.ToString()} {acceleration.ToString()}m/s/s");
                 double force = Remote.CalculateShipMass().TotalMass * acceleration;
 
                 foreach (IMyThrust thruster in Thrusters[direction])
                 {
-                    Program.Echo($"\nF: {force} {direction.ToString()} {force.ToString()}");
+                    Drone.LogToLcd($"{thruster.CustomName}\n");
+                    thruster.Enabled = true;
                     thruster.ThrustOverride = (float)force;
                 }
 
                 foreach (IMyThrust thruster in Thrusters[oppositeDirection])
                 {
-                    //Program.Echo($"\n{oppositeDirection.ToString()} 0");
+                    Drone.LogToLcd($"Nulling {thruster.CustomName} {thruster.CurrentThrust}");
                     thruster.ThrustOverride = 0f;
+                    thruster.Enabled = false;
+                    Drone.LogToLcd($"Nulled {thruster.CustomName} {thruster.CurrentThrust}");
                 }
             }
 

@@ -65,7 +65,7 @@ namespace IngameScript
                 this.ManeuverService = new ManeuverService(this.Program, Remote, this);
 
                 Program.Echo("Drone Initialized");
-                //LogToLcd("Drone=" + Program.Me.EntityId.ToString());
+                LogToLcd($"My address is: {Program.Me.EntityId.ToString()}");
             }
 
             private void InitializeBrain()
@@ -245,6 +245,7 @@ namespace IngameScript
 
                 foreach(IMyThrust thruster in Thrusters)
                 {
+                    thruster.Enabled = true;
                     thruster.ThrustOverride = 0;
                 }
             }
