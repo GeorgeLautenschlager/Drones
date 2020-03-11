@@ -39,6 +39,7 @@ namespace IngameScript
             private Vector3D AccelerationVector = new Vector3D();
             private Vector3D Pos;
             private PID PitchPID, YawPID, RollPID;
+            public PID XPID, YPID, ZPID;
 
             private double DistanceAccuracy;
             private const float MinAngleRad = 0.3f;
@@ -69,10 +70,15 @@ namespace IngameScript
                 // Initialize the thrusters.
                 InitThrusters();
 
-                // Set PID's, used for for alignment.
+                // Set rotation PID controllers
                 PitchPID = new PID(5, 0, 3, 0.75);
                 YawPID = new PID(5, 0, 3, 0.75);
                 RollPID = new PID(5, 0, 3, 0.75);
+
+                // Set translation PID controllers
+                XPID = new PID(5, 2.5, 0.2, 0.75);
+                YPID = new PID(5, 2.5, 0.2, 0.75);
+                ZPID = new PID(5, 2.5, 0.2, 0.75);
             }
 
             public void SetThrust(Vector3D deltaV, bool align)
@@ -83,12 +89,29 @@ namespace IngameScript
                 //Program.Echo($"\nOpposite: {oppositeDirection.ToString()}");
                 float maxThrust = MaxThrusters[direction];
 
-                double decayFactor = 0.8;
-                if (align && direction != Base6Directions.Direction.Forward || direction != Base6Directions.Direction.Backward)
-                    decayFactor = 0.25;
+                //double decayFactor = 0.8;
+                //if (align && direction != Base6Directions.Direction.Forward || direction != Base6Directions.Direction.Backward)
+                //    decayFactor = 0.25;
 
-                double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 0.1, Math.Pow(deltaV.Length(), decayFactor));
-                Drone.LogToLcd($"{direction.ToString()} {acceleration.ToString()}m/s/s");
+                //double acceleration = MathHelper.Clamp(maxThrust / Remote.CalculateShipMass().TotalMass, 0.1, Math.Pow(deltaV.Length(), decayFactor));
+                //Drone.LogToLcd($"{direction.ToString()} {acceleration.ToString()}m/s/s");
+
+                double acceleration = 0;
+                var freq = this.Program.Runtime.TimeSinceLastRun.TotalMilliseconds / 1000;
+
+                if (direction == Base6Directions.Direction.Left || direction == Base6Directions.Direction.Right)
+                {
+                    acceleration = XPID.CorrectError(deltaV.Length(), freq);
+                }
+                else if (direction == Base6Directions.Direction.Up || direction == Base6Directions.Direction.Down)
+                {
+                    acceleration = YPID.CorrectError(deltaV.Length(), freq);
+                }
+                else if (direction == Base6Directions.Direction.Forward || direction == Base6Directions.Direction.Backward)
+                {
+                    acceleration = ZPID.CorrectError(deltaV.Length(), freq);
+                }
+
                 double force = Remote.CalculateShipMass().TotalMass * acceleration;
 
                 foreach (IMyThrust thruster in Thrusters[direction])
