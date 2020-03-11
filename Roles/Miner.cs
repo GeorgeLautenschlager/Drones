@@ -46,15 +46,12 @@ namespace IngameScript
             // the drone just needs to fly to the mining site.
             private Vector3D MiningSite;
             private Vector3D TunnelEnd;
-            private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
-            private Vector3D dockingConnectorOrientation;
             public long ForemanAddress;
-            private bool DockingClearanceReceived = false;
             private bool ManualMining;
             private bool ManualSiteApproach;
             private bool ComputeDeparturePoint;
-            private DockingAttempt Docking;
             private Move Move;
+            private DockingAttempt DockingAttempt;
             private Tunnel Tunnel;
 
             public Miner(MyIni config)
@@ -95,7 +92,7 @@ namespace IngameScript
                         {
                             DeparturePoint = Drone.DockingConnector.GetPosition() + 15 * Drone.DockingConnector.WorldMatrix.Backward;
                         }
-                        this.State = 1;
+                        State = 1;
                         break;
                     case 1:
                         if (Move == null)
@@ -105,7 +102,7 @@ namespace IngameScript
                         if (Move.Perform())
                         {
                             Move = null;
-                            this.State = 2;
+                            State = 2;
                         }
                         break;
                     case 2:
@@ -121,7 +118,7 @@ namespace IngameScript
                         if (Move.Perform())
                         {
                             Move = null;
-                            this.State = 3;
+                            State = 3;
                         }
                         break;
                     case 3:
@@ -133,83 +130,26 @@ namespace IngameScript
                         }
                         else
                         {
-                            //TODO: introduce Tunnel, CargoService and speed limit in Move
                             Drone.Log("Automated");
-                            //if (Move == null)
-                            //{
-                            //    Drone.Log("Beginning Excavation");
-                            //    ActivateDrills();
-                            //    Move = new Move(Drone, new Queue<Vector3D>(new[] { TunnelEnd }), Drone.Remote, true);
-                            //}
-
-                            //if (Move.Perform())
-                            //{
-                            //    Drone.Log("Excavating tunnel");
-                            //    Move = null;
-                            //    DeactivateDrills();
-                            //    this.State = 4;
-                            //}
                             ActivateDrills();
                             if (Tunnel.Mine())
                             {
-                                this.State = 4;
+                                State = 4;
                                 DeactivateDrills();
                             }
                         }
                         break;
                     case 4:
                         Drone.Wake();
-                        Drone.Program.IGC.SendUnicastMessage(ForemanAddress, DockingRequestChannel, "Requesting Docking Clearance");
-                        this.State = 5;
+
+                        if (DockingAttempt == null)
+                            DockingAttempt = new DockingAttempt(Drone, Drone.DockingConnector, ForemanAddress, DockingRequestChannel);
+
+                        if (DockingAttempt.Perform())
+                            State = 5;
                         break;
                     case 5:
-                        // Waiting for docking clearance from controller
-                        Drone.Log("Waiting for docking clearance.");
-                        if (DockingClearanceReceived)
-                        {
-                            this.State = 6;
-                            Drone.LogToLcd("Clearance Received");
-                            Drone.LogToLcd($"Approach: {ApproachPath[0].ToString()}");
-                            Drone.LogToLcd($"Docking Port: {ApproachPath[1].ToString()}\n");
-                        }
-                        break;
-                    case 6:
-                        Drone.Log($"\nProceeding to docking approach");
-                        if (Move == null)
-                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[0] }), Drone.Remote, true);
-
-                        if (Move.Perform())
-                        {
-                            Move = null;
-                            this.State = 7;
-                        }
-                        break;
-                    case 7:
-                        Drone.DockingConnector.Enabled = true;
-                        Drone.Log($"\nOn Final Approach");
-                        //=================================
-                        //TODO:  use the connectors bounding box to compute an offset?
-                        //=================================
-
-                        if (Move == null)
-                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[1] }), Drone.DockingConnector, true);
-
-                        if (Move.Perform() || Drone.DockingConnector.Status == MyShipConnectorStatus.Connected)
-                        {
-                            Move = null;
-                            this.State = 8;
-                        }
-                        Drone.DockingConnector.Connect();
-                        break;
-                    case 8:
-                        if (Drone.DockingConnector.Status == MyShipConnectorStatus.Connected)
-                        {
-                            this.State = 9;
-                        }
-
-                        Drone.DockingConnector.Connect();
-                        break;
-                    case 9:
+                        DockingAttempt = null;
                         Drone.Shutdown();
                         Drone.Sleep();
                         break;
@@ -277,30 +217,7 @@ namespace IngameScript
                 switch (callback)
                 {
                     case "unicast":
-                        MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
-                        if (message.Data == null)
-                            Drone.LogToLcd($"\nNo Message");
-
-                        if (message.Tag == DockingRequestChannel)
-                        {
-                            MyTuple<Vector3D, Vector3D, Vector3D> messageTuple = (MyTuple<Vector3D, Vector3D, Vector3D>)message.Data;
-                            ApproachPath[0] = messageTuple.Item1;
-                            ApproachPath[1] = messageTuple.Item2;
-                            DockingClearanceReceived = true;
-                        }
-                        else if (message.Tag == "recall")
-                        {
-                            this.State = 4;
-                        }
-                        else
-                        {
-                            Drone.LogToLcd($"{message.Tag} is not a recognized message format.");
-                        }
-
-                        
-                        break;
-                    case "docking_request_granted":
-                        this.Docking.ProcessClearance();
+                        ProcessUnicast();
                         break;
                     case "launch":
                         this.State = 0;
@@ -319,27 +236,25 @@ namespace IngameScript
                 }
             }
 
-            //TODO: this is too general to live in the Miner role. It should be moved to Drone, or maybe Role
-            public void AcceptDockingClearance()
+            private void ProcessUnicast()
             {
-                IMyBroadcastListener listener = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel);
-
-                if (listener == null)
-                    Drone.LogToLcd("\nNo listener found");
-
-                MyIGCMessage message = listener.AcceptMessage();
-
+                MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
                 if (message.Data == null)
-                    Drone.LogToLcd("No message");
+                    Drone.LogToLcd($"\nNo Message");
 
-                Drone.LogToLcd($"\nDocking Clearance: {message.Data.ToString()}");
-
-                string[] vectorStrings = message.Data.ToString().Split(',');
-                Vector3D.TryParse(vectorStrings[0], out dockingConnectorOrientation);
-                Vector3D.TryParse(vectorStrings[1], out ApproachPath[0]);
-                Vector3D.TryParse(vectorStrings[2], out ApproachPath[1]);
-
-                DockingClearanceReceived = true;
+                // TODO: This could be a switch
+                if (message.Tag == DockingRequestChannel && DockingAttempt != null)
+                {
+                    DockingAttempt.ProcessClearance(message);
+                }
+                else if (message.Tag == "recall")
+                {
+                    this.State = 4;
+                }
+                else
+                {
+                    Drone.LogToLcd($"{message.Tag} is not a recognized message format.");
+                }
             }
 
             public override string Name()

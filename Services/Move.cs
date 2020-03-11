@@ -28,17 +28,19 @@ namespace IngameScript
             private Queue<Vector3D> Waypoints;
             private IMyTerminalBlock ReferenceBlock;
             private bool Align;
+            private double SpeedLimit;
 
             // 0:initial, 1: aligning, 2: Moving, 3: Both
             int State;
 
-            public Move(Drone drone, Queue<Vector3D> waypoints, IMyTerminalBlock referenceBlock, bool align)
+            public Move(Drone drone, Queue<Vector3D> waypoints, IMyTerminalBlock referenceBlock, bool align, double speedLimit = -1)
             {
-                this.Drone = drone;
-                this.ReferenceBlock = referenceBlock;
-                this.Waypoints = waypoints;
-                this.State = 0;
-                this.Align = align;
+                Drone = drone;
+                ReferenceBlock = referenceBlock;
+                Waypoints = waypoints;
+                State = 0;
+                Align = align;
+                SpeedLimit = speedLimit;
             }
 
             public bool Perform()
@@ -70,7 +72,7 @@ namespace IngameScript
 
                     case 2:
                         Drone.Log("Translating");
-                        if (Drone.FlyTo(CurrentWaypoint, ReferenceBlock, Align))
+                        if (Drone.FlyTo(CurrentWaypoint, ReferenceBlock, Align, SpeedLimit))
                         {
                             this.State = 3;
                         }

@@ -29,28 +29,29 @@ namespace IngameScript
             private IMyShipConnector DockingPort;
             private bool RequestSent = false;
             private bool ClearanceGranted = false;
-            private Move move;
+            private long DockWithGrid;
+            private Move Move;
             private string DockingRequestChannel;
-            // TODO: when using Unicasts, tell the DockingAttempt, whcih grid to dock with
-            // private long DockWithGrid;
+            private Vector3D[] ApproachPath = new Vector3D[2] { new Vector3D(), new Vector3D() };
 
-            public DockingAttempt(Drone drone, IMyShipConnector dockingPort, string dockingRequestChannel)
+            public DockingAttempt(Drone drone, IMyShipConnector dockingPort, long dockWithGrid, string dockingRequestChannel)
             {
-                this.Drone = drone;
-                this.DockingPort = dockingPort;
-                this.DockingRequestChannel = dockingRequestChannel;
+                Drone = drone;
+                DockingPort = dockingPort;
+                DockWithGrid = dockWithGrid;
+                DockingRequestChannel = dockingRequestChannel;
             }
 
             public bool Perform()
             {
-                switch (this.State)
+                switch (State)
                 {
                     case "Initial":
-                        this.State = "Requesting Clearance";
+                        State = "Requesting Clearance";
                         break;
                     case "Requesting Clearance":
                         if (ClearanceGranted)
-                            this.State = "Processing Clearance";
+                            State = "Processing Clearance";
 
                         if (!RequestSent)
                         {
@@ -59,42 +60,60 @@ namespace IngameScript
                         }
 
                         break;
-                    case "Processing Clearance":
-                        ProcessClearance();
-                        this.State = "Approaching Dock";
+                    case "Waiting for Clearance":
                         break;
 
                     case "Approaching Dock":
-                        if (move == null)
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[0] }), Drone.Remote, true);
+
+                        if (Move.Perform())
                         {
-                            move = new Move(Drone, DockingPath, Drone.Remote, true);
-                            move.Perform();
-                        }
-                        else if (move.Perform())
-                        {
-                            move = null;
-                            this.State = "Final Approach";
+                            Move = null;
+                            State = "Docking";
                         }
 
+                        break;
+
+                    case "Docking":
+                        DockingPort.Enabled = true;
+
+                        Vector3D nearDock = ApproachPath[1] + Vector3D.Normalize(ApproachPath[0] - ApproachPath[1]) * 5;
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { nearDock }), DockingPort, true);
+
+                        if (Move.Perform())
+                        {
+                            Move = null;
+                            Drone.AllStop();
+                            State = "Final Approach";
+                        }
                         break;
 
                     case "Final Approach":
-                        if (move == null)
-                        {
-                            move = new Move(Drone, DockingPath, DockingPort, true);
-                            move.Perform();
-                        }
-                        else if (move.Perform())
-                        {
-                            move = null;
-                            this.State = "Connecting";
-                        }
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[1] }), DockingPort, true, 0.25);
 
+                        if (Move.Perform() || DockingPort.Status == MyShipConnectorStatus.Connected)
+                        {
+                            Move = null;
+                            Drone.AllStop();
+                            State = "Final Approach";
+                        }
+                        DockingPort.Connect();
                         break;
-
                     case "Connecting":
-                        Connect();
+                        if ( DockingPort.Status == MyShipConnectorStatus.Connected)
+                        {
+                            Drone.AllStop();
+                            State = "Final";
+                        }
+                        DockingPort.Connect();
+                        break;
+                    case "Final":
                         return true;
+                        break;
+                        
                 }
 
                 return false;
@@ -102,31 +121,19 @@ namespace IngameScript
             
             private void SendRequest()
             {
-                Drone.NetworkService.BroadcastMessage(DockingRequestChannel, "Requesting Docking Clearance");
+                Drone.Program.IGC.SendUnicastMessage(DockWithGrid, DockingRequestChannel, "Requesting Docking Clearance");
             }
 
-            public void ProcessClearance()
+            public void ProcessClearance(MyIGCMessage clearance)
             {
-                IMyBroadcastListener listener = this.Drone.NetworkService.GetBroadcastListenerForChannel(DockingRequestChannel);
+                //=================================
+                //TODO:  use the connectors bounding box to compute an offset?
+                //=================================
 
-                if (listener == null)
-                    Drone.LogToLcd("\nNo listener found");
-
-                MyIGCMessage message = listener.AcceptMessage();
-
-                if (message.Data == null)
-                    Drone.LogToLcd("No message");
-
-                Drone.LogToLcd($"\nDocking Clearance: {message.Data.ToString()}");
-
-                DockingPath = new Queue<Vector3D>();
-
-                string[] vectorStrings = message.Data.ToString().Split(',');
-                Vector3D outVector;
-                Vector3D.TryParse(vectorStrings[0], out outVector);
-                DockingPath.Enqueue(outVector);
-                Vector3D.TryParse(vectorStrings[1], out outVector);
-                DockingPath.Enqueue(outVector);
+                MyTuple<Vector3D, Vector3D, Vector3D> messageTuple = (MyTuple<Vector3D, Vector3D, Vector3D>)clearance.Data;
+                ApproachPath[0] = messageTuple.Item1;
+                ApproachPath[1] = messageTuple.Item2;
+                State = "Approaching Dock";
             }
 
             private void Connect()
