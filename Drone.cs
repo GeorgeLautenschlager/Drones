@@ -41,6 +41,7 @@ namespace IngameScript
             public IMyShipConnector DockingConnector;
             public IMyRemoteControl Remote;
             public IMyTextPanel CallbackLog;
+            public IMyCameraBlock Eye;
             public MyFixedPoint MaxCargo = 0;
 
             public Drone(Program program, List<Role> roles)
@@ -60,7 +61,8 @@ namespace IngameScript
 
                 List<IMyTextPanel> lcds = new List<IMyTextPanel>();
                 Grid().GetBlocksOfType<IMyTextPanel>(lcds, rc => rc.CustomName == "callback_log" && rc.IsSameConstructAs(Program.Me));
-                CallbackLog = lcds.First();
+                if(lcds != null && lcds.Count > 0)
+                    CallbackLog = lcds.First();
 
                 this.ManeuverService = new ManeuverService(this.Program, Remote, this);
 
@@ -76,7 +78,7 @@ namespace IngameScript
                     throw new Exception("Drone has no Brain!");
                 IMyRemoteControl remote = remotes.First();
                 
-                this.Remote = remote;
+                Remote = remote;
             }
 
             private void InitializeBlocks()
@@ -97,12 +99,18 @@ namespace IngameScript
                 if (FuelTanks == null || FuelTanks.Count == 0)
                     throw new Exception("Drone has no Fuel Tanks!");
 
-                List<IMyShipConnector> connectors = new List<IMyShipConnector>();
+                List<IMyTerminalBlock> blocks = new List<IMyTerminalBlock>();
                 //TODO: make sure you don't grab a connector on the other grid
-                Grid().GetBlocksOfType(connectors, block => block.IsSameConstructAs(Program.Me));
-                if (connectors == null || connectors.Count == 0)
+                Grid().GetBlocksOfType<IMyShipConnector>(blocks, block => block.IsSameConstructAs(Program.Me));
+                if (blocks == null || blocks.Count == 0)
                     throw new Exception("No docking connector found!");
-                DockingConnector = connectors.First();
+                DockingConnector = blocks.First() as IMyShipConnector;
+
+                //TODO: make sure you don't grab a connector on the other grid
+                Grid().GetBlocksOfType<IMyCameraBlock>(blocks, block => block.IsSameConstructAs(Program.Me));
+                if (blocks == null || blocks.Count == 0)
+                    throw new Exception("No docking connector found!");
+                Eye = blocks.First() as IMyCameraBlock;
 
                 InventoryBlocks = new List<IMyTerminalBlock>();
                 Grid().GetBlocksOfType<IMyTerminalBlock>(InventoryBlocks, block => block.InventoryCount > 0 && block.IsSameConstructAs(Program.Me));

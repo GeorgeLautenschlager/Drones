@@ -23,7 +23,7 @@ namespace IngameScript
     {
         public class RoleFactory
         {
-            public static Role Build(string roleName, MyIni config)
+            public static Role Build(string roleName, MyIni config, Program program = null)
             {
                 Role builtRole;
 
@@ -40,6 +40,9 @@ namespace IngameScript
                         break;
                     case "network_tester":
                         builtRole = new NetworkTester(config);
+                        break;
+                    case "surveyor":
+                        builtRole = new Surveyor(config);
                         break;
                     default:
                         throw new Exception($"Unable to build role: {roleName}");

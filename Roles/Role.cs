@@ -25,6 +25,7 @@ namespace IngameScript
         {
             protected const string DockingRequestChannel = "docking_requests";
             public Drone drone;
+            protected long ParentAddress;
             protected int State;
 
             protected Drone Drone

@@ -31,7 +31,8 @@ namespace IngameScript
             List<Role> roles = new List<Role>();
             foreach (string section in sections)
             {
-                roles.Add(RoleFactory.Build(section, config));
+                Echo($"Adding Role: {section}");
+                roles.Add(RoleFactory.Build(section, config, this));
             }
 
             this.drone = new Drone(this, roles);
