@@ -24,9 +24,10 @@ namespace IngameScript
         public class Tunnel
         {
             private Drone Drone;
-            public Vector3D StartingPoint;
-            private Vector3D EndPoint;
             private int State;
+
+            public Vector3D StartingPoint;
+            public Vector3D EndPoint;
             private int TunnelIndex;
 
             public Tunnel(Drone drone, Vector3D startingPoint, Vector3D endPoint)
@@ -36,6 +37,69 @@ namespace IngameScript
                 this.StartingPoint = startingPoint;
                 this.EndPoint = endPoint;
                 this.TunnelIndex = 1;
+            }
+
+            public Tunnel(MyIni asteroidCatalogue)
+            {
+                //go into the asteroid catalogue, look at available deposits and assign StartingPoint, EndPoint and TunnelIndex
+                List<string> sections = new List<string>();
+                asteroidCatalogue.GetSections(sections);
+                IEnumerable<string> deposits = sections.Where(record => record.StartsWith("deposit"));
+
+                //Assume one entry for now
+                string rawValue, deposit;
+                double depth;
+                int index;
+
+                if (deposits != null && deposits.Count() != 0)
+                    deposit = deposits.First();
+                else
+                    throw new Exception("No deposit data found!");
+
+                if (!asteroidCatalogue.Get(deposit, "deposit_depth").TryGetDouble(out depth))
+                    throw new Exception("deposit_depth is missing");
+                if (!asteroidCatalogue.Get(deposit, "index").TryGetInt32(out index))
+                    throw new Exception("index is missing");
+
+                //Convert config data into usable vectors
+                Vector3D TopLeftCorner;
+                if (asteroidCatalogue.Get(deposits.First(), "top_left_corner").TryGetString(out rawValue))
+                    Vector3D.TryParse(rawValue, out TopLeftCorner);
+                else
+                    throw new Exception("top_left_corner is missing");
+
+                Vector3D TopRightCorner;
+                if (asteroidCatalogue.Get(deposits.First(), "top_right_corner").TryGetString(out rawValue))
+                    Vector3D.TryParse(rawValue, out TopRightCorner);
+                else
+                    throw new Exception("top_right_corner is missing");
+
+                Vector3D BottomLeftCorner;
+                if (asteroidCatalogue.Get(deposits.First(), "bottom_left_corner").TryGetString(out rawValue))
+                    Vector3D.TryParse(rawValue, out BottomLeftCorner);
+                else
+                    throw new Exception("bottom_left_corner is missing");
+
+                SetPointsFromDeposit(index, TopLeftCorner, TopRightCorner, BottomLeftCorner, depth);
+            }
+
+            private void SetPointsFromDeposit(int index, Vector3D TopLeftCorner, Vector3D TopRightCorner, Vector3D BottomLeftCorner, double depth)
+            {
+                double droneWidth = 3.0;
+                Vector3D DepositNormal = (new PlaneD(TopLeftCorner, TopRightCorner, BottomLeftCorner)).Normal;
+                Vector3D xAxis, yAxis;
+                int rows, row, column, columns;
+
+                xAxis = TopRightCorner - TopLeftCorner;
+                yAxis = BottomLeftCorner - TopLeftCorner;
+                rows = (int) Math.Ceiling(xAxis.Length() / droneWidth);
+                columns = (int) Math.Ceiling(xAxis.Length() / droneWidth);
+                row = index % rows;
+                column = (int) Math.Floor(index / (double) rows);
+
+                // Starting from the "origin" move along the x axis 3 times the drone width and the y axis 3 times the drone width
+                StartingPoint = TopLeftCorner + (row * droneWidth * Vector3D.Normalize(xAxis)) + (column * droneWidth * Vector3D.Normalize(yAxis));
+                EndPoint = StartingPoint + depth * Vector3D.Normalize(DepositNormal);
             }
 
             public bool Mine()

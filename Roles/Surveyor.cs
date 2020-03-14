@@ -85,6 +85,7 @@ namespace IngameScript
                         break;
                     case "preparing to move":
                         // fly to obstacle immediately in front and stop on the nearest bounding box corner
+                        Drone.Eye.EnableRaycast = true;
                         Drone.Log($"Scan Range: {Drone.Eye.AvailableScanRange}");
                         if (Drone.Eye.CanScan(20000))
                         {
@@ -193,6 +194,11 @@ namespace IngameScript
                         break;
                     case "launch":
                         State = "initial";
+                        Drone.Wake();
+                        break;
+                    case "shoot":
+                        Drone.LogToLcd($"flying");
+                        State = "preparing to move";
                         Drone.Wake();
                         break;
                     case "recall":

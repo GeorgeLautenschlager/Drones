@@ -28,9 +28,6 @@ namespace IngameScript
             private long SurveyorAddress;
 
             IMySoundBlock DroneKlaxon;
-            Vector3D DepositCentre;
-            Vector3D DepositNormal;
-            double DepositDepth;
 
             public string Channel { get; private set; }
 
@@ -55,36 +52,6 @@ namespace IngameScript
                 else
                 {
                     throw new Exception("Drone has no address for its Miner!");
-                }
-
-                rawValue = config.Get(Name(), "deposit_centre").ToString();
-                if (rawValue != null && rawValue != "")
-                {
-                    Vector3D.TryParse(rawValue, out DepositCentre);
-                }
-                else
-                {
-                    throw new Exception("Deposit Centre not set");
-                }
-
-                rawValue = config.Get(Name(), "deposit_normal").ToString();
-                if (rawValue != null && rawValue != "")
-                {
-                    Vector3D.TryParse(rawValue, out DepositNormal);
-                }
-                else
-                {
-                    throw new Exception("Deposit Normal not set");
-                }
-
-                rawValue = config.Get(Name(), "deposit_depth").ToString();
-                if (rawValue != null && rawValue != "")
-                {
-                    Double.TryParse(rawValue, out DepositDepth);
-                }
-                else
-                {
-                    throw new Exception("Deposit Centre not set");
                 }
             }
             public override void InitWithDrone(Drone drone)
@@ -184,11 +151,11 @@ namespace IngameScript
                                 throw new Exception($"Error parsing config: {config.ToString()}");
 
                             //TODO: what about multiple deposits?
-                            ini.Set(report.Item1.ToString(), "deposit_type", report.Item2.ToString());
-                            ini.Set(report.Item1.ToString(), "deposit_depth", report.Item3.ToString());
-                            ini.Set(report.Item1.ToString(), "top_left_corner", report.Item4.ToString());
-                            ini.Set(report.Item1.ToString(), "top_right_corner", report.Item5.ToString());
-                            ini.Set(report.Item1.ToString(), "bottom_left_corner", report.Item6.ToString());
+                            ini.Set($"deposit {report.Item1.ToString()}", "deposit_type", report.Item2.ToString());
+                            ini.Set($"deposit {report.Item1.ToString()}", "deposit_depth", report.Item3.ToString());
+                            ini.Set($"deposit {report.Item1.ToString()}", "top_left_corner", report.Item4.ToString());
+                            ini.Set($"deposit {report.Item1.ToString()}", "top_right_corner", report.Item5.ToString());
+                            ini.Set($"deposit {report.Item1.ToString()}", "bottom_left_corner", report.Item6.ToString());
 
                             Drone.Program.Me.CustomData = ini.ToString();
                         }
@@ -222,18 +189,24 @@ namespace IngameScript
                             throw new Exception($"Error parsing config: {result.ToString()}");
                         }
 
-                        Vector3D MiningSite = DepositCentre + 10 * Vector3D.Normalize(DepositNormal);
-                        minerConfig.Set("miner", "mining_site", MiningSite.ToString());
+                        //Vector3D MiningSite = DepositCentre + 10 * Vector3D.Normalize(DepositNormal);
+                        //Vector3D TunnelEnd = DepositCentre - DepositDepth * Vector3D.Normalize(DepositNormal);
 
-                        Vector3D TunnelEnd = DepositCentre - DepositDepth * Vector3D.Normalize(DepositNormal);
-                        minerConfig.Set("miner", "tunnel_end", TunnelEnd.ToString());
+                        //get deposit data from catalogue
+                        //calculate mining_site for next tunnel
+                        //calculate tunnel_end from mining_site and depth
+                        MyIni asteroidCatalogue = new MyIni();
+                        asteroidCatalogue.TryParse(Drone.Program.Me.CustomData);
+                        Tunnel tunnel = new Tunnel(asteroidCatalogue);
 
+                        minerConfig.Set("miner", "mining_site", tunnel.StartingPoint.ToString());
+                        minerConfig.Set("miner", "tunnel_end", tunnel.EndPoint.ToString());
                         miner.CustomData = minerConfig.ToString();
 
-                        miner.TryRun("launch");
+                        //miner.TryRun("launch");
                         break;
                     case "deploy_surveyor":
-                        Drone.LogToLcd("Launching miner");
+                        Drone.LogToLcd("Launching surveyor");
 
                         List<IMyProgrammableBlock> surveyors = new List<IMyProgrammableBlock>();
                         Drone.Grid().GetBlocksOfType(surveyors, pb => MyIni.HasSection(pb.CustomData, "surveyor"));

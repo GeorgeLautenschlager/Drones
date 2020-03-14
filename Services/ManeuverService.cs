@@ -76,9 +76,9 @@ namespace IngameScript
                 RollPID = new PID(5, 0, 3, 0.75);
 
                 // Set translation PID controllers
-                XPID = new PID(5, 2.5, 0.2, 0.75);
-                YPID = new PID(5, 2.5, 0.2, 0.75);
-                ZPID = new PID(5, 2.5, 0.2, 0.75);
+                XPID = new PID(2, 1, 0, 0.75);
+                YPID = new PID(2, 1, 0, 0.75);
+                ZPID = new PID(2, 1, 0, 0.75);
             }
 
             public void SetThrust(Vector3D deltaV, bool align)

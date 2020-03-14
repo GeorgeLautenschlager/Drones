@@ -32,6 +32,9 @@ namespace IngameScript
             foreach (string section in sections)
             {
                 Echo($"Adding Role: {section}");
+                //TODO: I'm so sorry...
+                if(section.StartsWith("deposit"))
+                    continue;
                 roles.Add(RoleFactory.Build(section, config, this));
             }
 
