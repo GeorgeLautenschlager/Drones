@@ -23,7 +23,10 @@ namespace IngameScript
     {
         public class DroneController : Role
         {
+            //TODO: generalize and automate the tacking of owned drones and the assignment of drones to a controller
             private long MinerAddress;
+            private long SurveyorAddress;
+
             IMySoundBlock DroneKlaxon;
             Vector3D DepositCentre;
             Vector3D DepositNormal;
@@ -33,11 +36,21 @@ namespace IngameScript
 
             public DroneController(MyIni config)
             {
-                // TODO: move to proper ParseInit method
+                // TODO: move to proper ParseInit method and use TryGet instead
                 string rawValue = config.Get(Name(), "miner_address").ToString();
                 if (rawValue != null && rawValue != "")
                 {
                     Int64.TryParse(rawValue, out MinerAddress);
+                }
+                else
+                {
+                    throw new Exception("Drone has no address for its Miner!");
+                }
+
+                rawValue = config.Get(Name(), "surveyor_address").ToString();
+                if (rawValue != null && rawValue != "")
+                {
+                    Int64.TryParse(rawValue, out SurveyorAddress);
                 }
                 else
                 {
@@ -133,11 +146,12 @@ namespace IngameScript
 
                         if (message.Tag == DockingRequestChannel)
                         {
-                            IMyShipConnector dockingPort = Drone.Grid().GetBlockWithName("Docking Port 1") as IMyShipConnector;
+                            Drone.LogToLcd("\nReceived Docking Request");
+                            IMyShipConnector dockingPort = GetFreeDockingPort();
 
                             if (dockingPort == null)
                             {
-                                Drone.LogToLcd("\nDocking Port 1 not found.");
+                                Drone.LogToLcd("\nNo Free Docking Port");
                             }
                             else
                             {
@@ -183,9 +197,13 @@ namespace IngameScript
                     case "docking_request_pending":
                         ProcessDockingRequest();
                         break;
-                    case "recall":
-                        Drone.LogToLcd("Recalling drones");
+                    case "recall_miner":
+                        Drone.LogToLcd("Recalling miner");
                         Drone.Program.IGC.SendUnicastMessage(MinerAddress, "recall", "recall");
+                        break;
+                    case "recall_surveyor":
+                        Drone.LogToLcd("Recalling surveyor");
+                        Drone.Program.IGC.SendUnicastMessage(SurveyorAddress, "recall", "recall");
                         break;
                     case "deploy":
                         Drone.LogToLcd("Launching drones");
@@ -225,6 +243,19 @@ namespace IngameScript
                         Drone.LogToLcd($"\nDrone received unrecognized callback: {callback}");
                         break;
                 }
+            }
+
+            private IMyShipConnector GetFreeDockingPort()
+            {
+                IMyShipConnector dockingPort = Drone.Grid().GetBlockWithName("Docking Port 1") as IMyShipConnector;
+                List<IMyShipConnector> connectors = new List<IMyShipConnector>();
+
+                Drone.Grid().GetBlocksOfType<IMyShipConnector>(connectors, connector =>
+                {
+                    return MyIni.HasSection(connector.CustomData, "docking_port") && connector.Status == MyShipConnectorStatus.Unconnected;
+                });
+
+                return connectors.FirstOrDefault();
             }
 
             public override string Name()

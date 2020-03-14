@@ -25,10 +25,7 @@ namespace IngameScript
         {
             private Drone Drone;
             private string State = "Initial";
-            private Queue<Vector3D> DockingPath;
             private IMyShipConnector DockingPort;
-            private bool RequestSent = false;
-            private bool ClearanceGranted = false;
             private long DockWithGrid;
             private Move Move;
             private string DockingRequestChannel;
@@ -50,19 +47,12 @@ namespace IngameScript
                         State = "Requesting Clearance";
                         break;
                     case "Requesting Clearance":
-                        if (ClearanceGranted)
-                            State = "Processing Clearance";
-
-                        if (!RequestSent)
-                        {
-                            SendRequest();
-                            RequestSent = true;
-                        }
-
+                        SendRequest();
+                        State = "Waiting for Clearance";
                         break;
                     case "Waiting for Clearance":
+                        Drone.Log("Waiting for clearance");
                         break;
-
                     case "Approaching Dock":
                         if (Move == null)
                             Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[0] }), Drone.Remote, true);
@@ -74,7 +64,6 @@ namespace IngameScript
                         }
 
                         break;
-
                     case "Docking":
                         DockingPort.Enabled = true;
 
@@ -88,8 +77,8 @@ namespace IngameScript
                             Drone.AllStop();
                             State = "Final Approach";
                         }
-                        break;
 
+                        break;
                     case "Final Approach":
                         if (Move == null)
                             Move = new Move(Drone, new Queue<Vector3D>(new[] { ApproachPath[1] }), DockingPort, true, 0.25);
@@ -112,7 +101,6 @@ namespace IngameScript
                         break;
                     case "Final":
                         return true;
-                        break;
                         
                 }
 
@@ -129,16 +117,10 @@ namespace IngameScript
                 //=================================
                 //TODO:  use the connectors bounding box to compute an offset?
                 //=================================
-
                 MyTuple<Vector3D, Vector3D, Vector3D> messageTuple = (MyTuple<Vector3D, Vector3D, Vector3D>)clearance.Data;
                 ApproachPath[0] = messageTuple.Item1;
                 ApproachPath[1] = messageTuple.Item2;
                 State = "Approaching Dock";
-            }
-
-            private void Connect()
-            {
-
             }
         }
     }

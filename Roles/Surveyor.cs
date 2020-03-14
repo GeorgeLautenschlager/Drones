@@ -39,6 +39,7 @@ namespace IngameScript
             public override void InitWithDrone(Drone drone)
             {
                 Drone = drone;
+                Drone.Program.IGC.UnicastListener.SetMessageCallback("unicast");
                 Drone.Wake();
             }
 
@@ -74,7 +75,7 @@ namespace IngameScript
                     case "preparing to move":
                         // fly to obstacle immediately in front and stop on the nearest bounding box corner
                         Drone.Log($"Scan Range: {Drone.Eye.AvailableScanRange}");
-                        if(Drone.Eye.CanScan(20000))
+                        if (Drone.Eye.CanScan(20000))
                         {
                             Obstacle = Drone.Eye.Raycast(20000, 0, 0);
                             if (!Obstacle.IsEmpty())
@@ -106,7 +107,7 @@ namespace IngameScript
                             Obstacle.BoundingBox.GetCorners().First()
                         );
 
-                        foreach(Vector3D corner in Obstacle.BoundingBox.GetCorners())
+                        foreach (Vector3D corner in Obstacle.BoundingBox.GetCorners())
                         {
                             double distance = (corner - Drone.Remote.GetPosition()).Length();
                             if (distance < candidate.Item1)
@@ -122,14 +123,11 @@ namespace IngameScript
                     case "flying":
                         if (Move.Perform())
                             State = "arrived";
-
                         break;
                     case "arrived":
                         Drone.Program.IGC.SendUnicastMessage(ParentAddress, "Notifications", "I have arrived at the survey site");
                         Drone.Sleep();
                         return;
-                        break;
-
                     case "surveying":
                         Drone.Sleep();
                         break;
@@ -140,7 +138,7 @@ namespace IngameScript
                             DockingAttempt = new DockingAttempt(Drone, Drone.DockingConnector, ParentAddress, DockingRequestChannel);
 
                         if (DockingAttempt.Perform())
-                            State = "shutting down";
+                            State = "shutting down";;
                         break;
                     case "shutting down":
                         DockingAttempt = null;
@@ -155,7 +153,7 @@ namespace IngameScript
                 switch (callback)
                 {
                     case "unicast":
-                        //ProcessUnicast();
+                        ProcessUnicast();
                         break;
                     case "start_survey":
                         MyIni ini = new MyIni();
@@ -182,12 +180,37 @@ namespace IngameScript
                     case "submit_survey":
                         Drone.Program.IGC.SendUnicastMessage(ParentAddress, "survey_reports", Survey.Report());
                         break;
+                    case "recall":
+                        Drone.Wake();
+                        State = "returning";
+                        break;
                     case "":
                         // Just Ignore empty arguments
                         break;
                     default:
                         Drone.LogToLcd($"\nDrone received unrecognized callback: {callback}");
                         break;
+                }
+            }
+
+            private void ProcessUnicast()
+            {
+                MyIGCMessage message = Drone.NetworkService.GetUnicastListener().AcceptMessage();
+                if (message.Data == null)
+                    Drone.LogToLcd($"\nNo Message");
+
+                // TODO: This could be a switch
+                if (message.Tag == DockingRequestChannel && DockingAttempt != null)
+                {
+                    DockingAttempt.ProcessClearance(message);
+                }
+                else if (message.Tag == "recall")
+                {
+                    State = "returning";
+                }
+                else
+                {
+                    Drone.LogToLcd($"{message.Tag} is not a recognized message format.");
                 }
             }
 
