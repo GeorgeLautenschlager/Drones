@@ -158,6 +158,26 @@ namespace IngameScript
                             DroneKlaxon.LoopPeriod = 2f;
                             DroneKlaxon.Play();
                         }
+                        else if (message.Tag == "survey_reports")
+                        {
+                            MyTuple<long, string, double, Vector3D, Vector3D, Vector3D> report = (MyTuple<long, string, double, Vector3D, Vector3D, Vector3D>)message.Data;
+                            Drone.LogToLcd($"Received survey_report: {report.ToString()}");
+
+                            //TODO: This needs to be in a persistence layer, not the CustomData
+                            MyIni ini = new MyIni();
+                            MyIniParseResult config;
+                            if (!ini.TryParse(Drone.Program.Me.CustomData, out config))
+                                throw new Exception($"Error parsing config: {config.ToString()}");
+
+                            //TODO: what about multiple deposits?
+                            ini.Set(report.Item1.ToString(), "deposit_type", report.Item2.ToString());
+                            ini.Set(report.Item1.ToString(), "deposit_depth", report.Item3.ToString());
+                            ini.Set(report.Item1.ToString(), "top_left_corner", report.Item4.ToString());
+                            ini.Set(report.Item1.ToString(), "top_right_corner", report.Item5.ToString());
+                            ini.Set(report.Item1.ToString(), "bottom_left_corner", report.Item6.ToString());
+
+                            Drone.Program.Me.CustomData = ini.ToString();
+                        }
 
                         break;
                     case "docking_request_pending":

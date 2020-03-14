@@ -28,6 +28,7 @@ namespace IngameScript
             private MyDetectedEntityInfo Obstacle;
             private Move Move;
             private DockingAttempt DockingAttempt;
+            private Survey Survey;
 
             public Surveyor(MyIni config)
             {
@@ -156,10 +157,30 @@ namespace IngameScript
                     case "unicast":
                         //ProcessUnicast();
                         break;
-                    case "fly":
-                        this.State = "preparing to move";
-                        Drone.Eye.EnableRaycast = true;
-                        Drone.Wake();
+                    case "start_survey":
+                        MyIni ini = new MyIni();
+                        MyIniParseResult config;
+                        if (!ini.TryParse(Drone.Program.Me.CustomData, out config))
+                            throw new Exception($"Error parsing config: {config.ToString()}");
+
+                        string depositType;
+                        if (!ini.Get(Name(), "deposit_type").TryGetString(out depositType))
+                            throw new Exception("deposit_type is missing");
+
+                        double depth;
+                        if (!ini.Get(Name(), "deposit_depth").TryGetDouble(out depth))
+                            throw new Exception("depth is missing");
+
+                        if (Drone.Eye.CanScan(500))
+                            Obstacle = Drone.Eye.Raycast(500, 0, 0);
+
+                        Survey = new Survey(Obstacle.EntityId, depth, depositType);
+                        break;
+                    case "mark":
+                        Survey.Mark(Drone.Remote.GetPosition());
+                        break;
+                    case "submit_survey":
+                        Drone.Program.IGC.SendUnicastMessage(ParentAddress, "survey_reports", Survey.Report());
                         break;
                     case "":
                         // Just Ignore empty arguments
