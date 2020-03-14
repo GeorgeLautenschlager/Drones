@@ -205,8 +205,8 @@ namespace IngameScript
                         Drone.LogToLcd("Recalling surveyor");
                         Drone.Program.IGC.SendUnicastMessage(SurveyorAddress, "recall", "recall");
                         break;
-                    case "deploy":
-                        Drone.LogToLcd("Launching drones");
+                    case "deploy_miner":
+                        Drone.LogToLcd("Launching miner");
 
                         List<IMyProgrammableBlock> miners = new List<IMyProgrammableBlock>();
                         Drone.Grid().GetBlocksOfType(miners, pb => MyIni.HasSection(pb.CustomData, "miner"));
@@ -231,6 +231,15 @@ namespace IngameScript
                         miner.CustomData = minerConfig.ToString();
 
                         miner.TryRun("launch");
+                        break;
+                    case "deploy_surveyor":
+                        Drone.LogToLcd("Launching miner");
+
+                        List<IMyProgrammableBlock> surveyors = new List<IMyProgrammableBlock>();
+                        Drone.Grid().GetBlocksOfType(surveyors, pb => MyIni.HasSection(pb.CustomData, "surveyor"));
+                        IMyProgrammableBlock surveyor = surveyors.First();
+
+                        surveyor.TryRun("launch");
                         break;
                     case "echo":
                         Drone.LogToLcd("Echo");

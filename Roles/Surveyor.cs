@@ -66,7 +66,18 @@ namespace IngameScript
                         Drone.Eye.EnableRaycast = true;
 
                         DeparturePoint = Drone.DockingConnector.GetPosition() + 15 * Drone.DockingConnector.WorldMatrix.Backward;
-                        State = "point";
+                        State = "departing";
+                        break;
+                    case "departing":
+                        if (Move == null)
+                            Move = new Move(Drone, new Queue<Vector3D>(new[] { DeparturePoint }), Drone.Remote, false);
+
+                        // Departing
+                        if (Move.Perform())
+                        {
+                            Move = null;
+                            State = "point";
+                        }
                         break;
                     case "point":
                         // Waiting to be oriented by the player
@@ -179,6 +190,10 @@ namespace IngameScript
                         break;
                     case "submit_survey":
                         Drone.Program.IGC.SendUnicastMessage(ParentAddress, "survey_reports", Survey.Report());
+                        break;
+                    case "launch":
+                        State = "initial";
+                        Drone.Wake();
                         break;
                     case "recall":
                         Drone.Wake();
