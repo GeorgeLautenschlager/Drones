@@ -27,10 +27,6 @@ namespace IngameScript
             /* 
                 * This is a test role
             */
-            private IMyShipConnector DockingConnector;
-            private Vector3D Target;
-            private Move Move;
-            private IMyCockpit Cockpit;
 
             public Tester(MyIni config)
             {
@@ -40,14 +36,6 @@ namespace IngameScript
             public override void InitWithDrone(Drone drone)
             {
                 Drone = drone;
-
-                List<IMyShipConnector> connectors = new List<IMyShipConnector>();
-                Drone.Program.GridTerminalSystem.GetBlocksOfType<IMyShipConnector>(connectors);
-                if (connectors == null || connectors.Count == 0)
-                    throw new Exception("No docking connector found!");
-
-                DockingConnector = connectors.First();
-
                 State = 0;
             }
 
@@ -58,13 +46,43 @@ namespace IngameScript
 
             public override void Perform()
             {
-                Drone.LogToLcd("Deposit Centre: " + Drone.Remote.GetPosition());
-                Drone.LogToLcd("Deposit Normal: " + Drone.Remote.WorldMatrix.Backward);
+                Vector3D position = new Vector3D(0, 0, 0);
+
+                if (Drone.ManeuverService.AlignBlockTo(position, Drone.Remote))
+                {
+                    Drone.Sleep();
+                    Vector3D translationVector = position - Drone.Remote.GetPosition();
+
+                    Vector3D transformedTranslationVector = Vector3D.TransformNormal(translationVector, MatrixD.Transpose(Drone.Remote.WorldMatrix));
+                    Vector3D proj, dir;
+
+                    Drone.LogToLcd($"Position: {Drone.Remote.GetPosition()}");
+                    Drone.LogToLcd($"Dist: {transformedTranslationVector.Length()}");
+                    dir = new Vector3D(Drone.Remote.WorldMatrix.Forward);
+                    proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
+                    Drone.LogToLcd($"z: {proj.Length()}");
+                    dir = new Vector3D(Drone.Remote.WorldMatrix.Right);
+                    proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
+                    Drone.LogToLcd($"x: {proj.Length()}");
+                    dir = new Vector3D(Drone.Remote.WorldMatrix.Down);
+                    proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
+                    Drone.LogToLcd($"y: {proj.Length()}");
+                }
+                else
+                {
+                    Drone.Wake();
+                }
+                
             }
 
             public override string Name()
             {
                 return "tester";
+            }
+
+            public override void HandleCallback(string callback)
+            {
+                
             }
         }
     }

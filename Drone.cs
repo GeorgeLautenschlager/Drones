@@ -109,7 +109,7 @@ namespace IngameScript
                 //TODO: make sure you don't grab a connector on the other grid
                 Grid().GetBlocksOfType<IMyCameraBlock>(blocks, block => block.IsSameConstructAs(Program.Me));
                 if (blocks == null || blocks.Count == 0)
-                    throw new Exception("No docking connector found!");
+                    throw new Exception("No camera found!");
                 Eye = blocks.First() as IMyCameraBlock;
 
                 InventoryBlocks = new List<IMyTerminalBlock>();
@@ -281,36 +281,47 @@ namespace IngameScript
                     targetSpeed = speedLimit;
                 }
 
+                Vector3D transformedTranslationVector = Vector3D.TransformNormal(translationVector, MatrixD.Transpose(Remote.WorldMatrix));
+                Vector3D proj, dir;
+
+                LogToLcd($"Dist: {transformedTranslationVector.Length()}");
+                dir = new Vector3D(Remote.WorldMatrix.Forward);
+                proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
+                LogToLcd($"z: {proj.Length()}");
+                dir = new Vector3D(Remote.WorldMatrix.Right);
+                proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
+                LogToLcd($"x: {proj.Length()}");
+                dir = new Vector3D(Remote.WorldMatrix.Down);
+                proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
+                LogToLcd($"y: {proj.Length()}");
+
                 Vector3D targetVelocity = Vector3D.Normalize(translationVector) * targetSpeed;
                 Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
 
-                LogToLcd($"dV: {velocityDelta.Length()}\n");
-                //if (velocityDelta.Length() < MathHelper.Clamp(translationVector.Length()/1000, 0.10, 5))
-                //    return false;
-
+                LogToLcd($"dV: {velocityDelta.Length()}");
                 Vector3D transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
 
-                Vector3D projection;
-                Vector3D directionVector;
+                Vector3D projection, directionVector;
 
                 //Z (Forward and Backward)
-                directionVector = new Vector3D(Remote.WorldMatrix.Down);
+                directionVector = new Vector3D(Remote.WorldMatrix.Forward);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
                 LogToLcd($"dVz: {projection.Length()}m/s");
-                this.ManeuverService.SetThrust(projection, align);
+                this.ManeuverService.SetThrust(new Vector3D(0, 0, transformedVelocityDelta.Z), align);
 
                 //X (Up and Down)
+                transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
                 directionVector = new Vector3D(Remote.WorldMatrix.Right);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
                 LogToLcd($"dVx: {projection.Length()}m/s");
-                this.ManeuverService.SetThrust(projection, align);
+                this.ManeuverService.SetThrust(new Vector3D(transformedVelocityDelta.X, 0, 0), align);
 
-                //Y (Left and Right
-                directionVector = new Vector3D(Remote.WorldMatrix.Forward);
+                //Y (Left and Right)
+                transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
+                directionVector = new Vector3D(Remote.WorldMatrix.Down);
                 projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
-                LogToLcd($"dVy: {projection.Length()}m/s");
-                this.ManeuverService.SetThrust(projection, align);
-                LogToLcd($"{DateTime.Now}\n\n");
+                LogToLcd($"dVy: {projection.Length()}m/s\n\n");
+                this.ManeuverService.SetThrust(new Vector3D(0, transformedVelocityDelta.Y, 0), align);
 
                 return false;
             }
