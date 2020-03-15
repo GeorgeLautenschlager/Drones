@@ -70,8 +70,6 @@ namespace IngameScript
                 Drone.ListenToChannel(DockingRequestChannel);
                 Drone.NetworkService.RegisterBroadcastCallback(DockingRequestChannel, "docking_request_granted");
                 Drone.Program.IGC.UnicastListener.SetMessageCallback("unicast");
-
-                Tunnel = new Tunnel(Drone, MiningSite, TunnelEnd);
             }
 
             public override void Perform()
@@ -87,6 +85,8 @@ namespace IngameScript
                         Drone.DockingConnector.Disconnect();
                         Drone.DockingConnector.Enabled = false;
                         Drone.OpenFuelTanks();
+
+                        InitializeMiningRun();
 
                         if(ComputeDeparturePoint)
                         {
@@ -150,6 +150,7 @@ namespace IngameScript
                         break;
                     case 5:
                         DockingAttempt = null;
+                        Drone.LogToLcd("Miner Shutting Down");
                         Drone.Shutdown();
                         Drone.Sleep();
                         break;
@@ -178,14 +179,6 @@ namespace IngameScript
                 string rawValue = config.Get(Name(), "departure_point").ToString();
                 if (!Vector3D.TryParse(rawValue, out DeparturePoint))
                     throw new Exception($"Unable to parse: {rawValue} as departure point");
-
-                rawValue = config.Get(Name(), "mining_site").ToString();
-                if (!Vector3D.TryParse(rawValue, out MiningSite))
-                    throw new Exception($"Unable to parse: {rawValue} as mining site");
-
-                rawValue = config.Get(Name(), "tunnel_end").ToString();
-                if (!Vector3D.TryParse(rawValue, out TunnelEnd))
-                    throw new Exception($"Unable to parse: {rawValue} as tunnel end");
 
                 rawValue = config.Get(Name(), "foreman_address").ToString();
                 if (rawValue != null && rawValue != "")
@@ -255,6 +248,23 @@ namespace IngameScript
                 {
                     Drone.LogToLcd($"{message.Tag} is not a recognized message format.");
                 }
+            }
+
+            private void InitializeMiningRun()
+            {
+                MyIni config = Drone.GetConfig();
+
+                string rawValue = config.Get(Name(), "mining_site").ToString();
+                if (!Vector3D.TryParse(rawValue, out MiningSite))
+                    throw new Exception($"Unable to parse: {rawValue} as mining site");
+
+                rawValue = config.Get(Name(), "tunnel_end").ToString();
+                if (!Vector3D.TryParse(rawValue, out TunnelEnd))
+                    throw new Exception($"Unable to parse: {rawValue} as tunnel end");
+
+
+
+                Tunnel = new Tunnel(Drone, MiningSite, TunnelEnd);
             }
 
             public override string Name()

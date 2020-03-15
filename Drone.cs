@@ -274,7 +274,8 @@ namespace IngameScript
                 double targetSpeed;
                 if (speedLimit == -1)
                 {
-                    targetSpeed = Math.Pow(translationVector.Length(), 1 / 1.4);
+                    //TODO: modulate speed my thrust to weight ratio
+                    targetSpeed = Math.Pow(translationVector.Length(), 1 / 1.6);
                 }
                 else
                 {
@@ -294,6 +295,15 @@ namespace IngameScript
             public void RegisterUnicastRecipient(string name, long address)
             {
                 NetworkService.RegisterUnicastRecipient(name, address);
+            }
+        
+            public MyIni GetConfig()
+            {
+                MyIni config = new MyIni();
+
+                config.TryParse(Program.Me.CustomData);
+
+                return config;
             }
         }
     }

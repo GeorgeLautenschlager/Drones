@@ -131,6 +131,9 @@ namespace IngameScript
                         break;
                     //Backing out
                     case 3:
+                        //Calculate backout point
+                        Vector3D BackOutPoint = (EndPoint - StartingPoint) * 2;
+
                         if (Drone.FlyTo(StartingPoint, Drone.DockingConnector, false, 1))
                         {
                             return true;
