@@ -281,46 +281,11 @@ namespace IngameScript
                     targetSpeed = speedLimit;
                 }
 
-                Vector3D transformedTranslationVector = Vector3D.TransformNormal(translationVector, MatrixD.Transpose(Remote.WorldMatrix));
-                Vector3D proj, dir;
-
-                LogToLcd($"Dist: {transformedTranslationVector.Length()}");
-                dir = new Vector3D(Remote.WorldMatrix.Forward);
-                proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
-                LogToLcd($"z: {proj.Length()}");
-                dir = new Vector3D(Remote.WorldMatrix.Right);
-                proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
-                LogToLcd($"x: {proj.Length()}");
-                dir = new Vector3D(Remote.WorldMatrix.Down);
-                proj = Vector3D.ProjectOnVector(ref transformedTranslationVector, ref dir);
-                LogToLcd($"y: {proj.Length()}");
-
-                Vector3D targetVelocity = Vector3D.Normalize(translationVector) * targetSpeed;
-                Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
-
-                LogToLcd($"dV: {velocityDelta.Length()}");
+                Vector3D velocityDelta = Vector3D.Normalize(translationVector) * targetSpeed - Remote.GetShipVelocities().LinearVelocity;
                 Vector3D transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
 
-                Vector3D projection, directionVector;
-
-                //Z (Forward and Backward)
-                directionVector = new Vector3D(Remote.WorldMatrix.Forward);
-                projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
-                LogToLcd($"dVz: {projection.Length()}m/s");
                 this.ManeuverService.SetThrust(new Vector3D(0, 0, transformedVelocityDelta.Z), align);
-
-                //X (Up and Down)
-                transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
-                directionVector = new Vector3D(Remote.WorldMatrix.Right);
-                projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
-                LogToLcd($"dVx: {projection.Length()}m/s");
                 this.ManeuverService.SetThrust(new Vector3D(transformedVelocityDelta.X, 0, 0), align);
-
-                //Y (Left and Right)
-                transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
-                directionVector = new Vector3D(Remote.WorldMatrix.Down);
-                projection = Vector3D.ProjectOnVector(ref transformedVelocityDelta, ref directionVector);
-                LogToLcd($"dVy: {projection.Length()}m/s\n\n");
                 this.ManeuverService.SetThrust(new Vector3D(0, transformedVelocityDelta.Y, 0), align);
 
                 return false;
