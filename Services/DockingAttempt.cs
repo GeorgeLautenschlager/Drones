@@ -24,7 +24,7 @@ namespace IngameScript
         public class DockingAttempt
         {
             private Drone Drone;
-            private string State = "Initial";
+            private string State;
             private IMyShipConnector DockingPort;
             private long DockWithGrid;
             private Move Move;
@@ -37,6 +37,7 @@ namespace IngameScript
                 DockingPort = dockingPort;
                 DockWithGrid = dockWithGrid;
                 DockingRequestChannel = dockingRequestChannel;
+                State = "Initial";
             }
 
             public bool Perform()
@@ -87,7 +88,7 @@ namespace IngameScript
                         {
                             Move = null;
                             Drone.AllStop();
-                            State = "Final Approach";
+                            State = "Connecting";
                         }
                         DockingPort.Connect();
                         break;
