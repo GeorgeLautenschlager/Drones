@@ -67,7 +67,7 @@ namespace IngameScript
                     case "Docking":
                         DockingPort.Enabled = true;
 
-                        Vector3D nearDock = ApproachPath[1] + Vector3D.Normalize(ApproachPath[0] - ApproachPath[1]) * 5;
+                        Vector3D nearDock = ApproachPath[1] + Vector3D.Normalize(ApproachPath[0] - ApproachPath[1]) * 2.5;
                         if (Move == null)
                             Move = new Move(Drone, new Queue<Vector3D>(new[] { nearDock }), DockingPort, true);
 
