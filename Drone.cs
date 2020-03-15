@@ -264,7 +264,7 @@ namespace IngameScript
                 Vector3D translationVector = position - reference.GetPosition();
 
                 Log($"D: {translationVector.Length()}");
-                if(translationVector.Length() < 0.1)
+                if(translationVector.Length() < 0.25)
                 {
                     Log("Arrived at target, All Stop.");
                     AllStop();
@@ -274,7 +274,7 @@ namespace IngameScript
                 double targetSpeed;
                 if (speedLimit == -1)
                 {
-                    targetSpeed = Math.Pow(translationVector.Length(), 1 / 2.1);
+                    targetSpeed = Math.Pow(translationVector.Length(), 1 / 1.4);
                 }
                 else
                 {
@@ -285,8 +285,8 @@ namespace IngameScript
                 Vector3D velocityDelta = targetVelocity - Remote.GetShipVelocities().LinearVelocity;
 
                 LogToLcd($"dV: {velocityDelta.Length()}\n");
-                if (velocityDelta.Length() < MathHelper.Clamp(translationVector.Length()/1000, 0.25, 5))
-                    return false;
+                //if (velocityDelta.Length() < MathHelper.Clamp(translationVector.Length()/1000, 0.10, 5))
+                //    return false;
 
                 Vector3D transformedVelocityDelta = Vector3D.TransformNormal(velocityDelta, MatrixD.Transpose(Remote.WorldMatrix));
 

@@ -109,7 +109,7 @@ namespace IngameScript
                     //Mining Tunnel
                     case 0:
                         Drone.ManeuverService.AlignBlockTo(EndPoint, Drone.Remote);
-                        if (Drone.FlyTo(EndPoint, Drone.Remote, false, 0.5))
+                        if (Drone.FlyTo(EndPoint, Drone.Remote, false, 0.3))
                         {
                             State = 1;
                         }
@@ -131,7 +131,7 @@ namespace IngameScript
                         break;
                     //Backing out
                     case 3:
-                        if (Drone.FlyTo(StartingPoint, Drone.DockingConnector, false, 2))
+                        if (Drone.FlyTo(StartingPoint, Drone.DockingConnector, false, 1))
                         {
                             return true;
                         }

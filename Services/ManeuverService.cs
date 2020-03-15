@@ -123,10 +123,8 @@ namespace IngameScript
 
                 foreach (IMyThrust thruster in Thrusters[oppositeDirection])
                 {
-                    Drone.LogToLcd($"Nulling {thruster.CustomName} {thruster.CurrentThrust}");
                     thruster.ThrustOverride = 0f;
                     thruster.Enabled = false;
-                    Drone.LogToLcd($"Nulled {thruster.CustomName} {thruster.CurrentThrust}");
                 }
             }
 

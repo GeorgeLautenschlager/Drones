@@ -203,7 +203,7 @@ namespace IngameScript
                         minerConfig.Set("miner", "tunnel_end", tunnel.EndPoint.ToString());
                         miner.CustomData = minerConfig.ToString();
 
-                        //miner.TryRun("launch");
+                        miner.TryRun("launch");
                         break;
                     case "deploy_surveyor":
                         Drone.LogToLcd("Launching surveyor");
