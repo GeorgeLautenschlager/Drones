@@ -156,7 +156,31 @@ namespace IngameScript
                             ini.Set($"deposit {report.Item1.ToString()}", "top_left_corner", report.Item4.ToString());
                             ini.Set($"deposit {report.Item1.ToString()}", "top_right_corner", report.Item5.ToString());
                             ini.Set($"deposit {report.Item1.ToString()}", "bottom_left_corner", report.Item6.ToString());
+                            ini.Set($"deposit {report.Item1.ToString()}", "index", 0);
 
+                            Drone.Program.Me.CustomData = ini.ToString();
+                        }
+                        else if (message.Tag == "tunnel_complete")
+                        {
+                            MyIni ini = new MyIni();
+
+                            MyIniParseResult config;
+                            if (!ini.TryParse(Drone.Program.Me.CustomData, out config))
+                                throw new Exception($"Error parsing config: {config.ToString()}");
+
+                            int completedIndex = (int) message.Data;
+
+                            List<string> sections = new List<string>();
+                            ini.GetSections(sections);
+                            IEnumerable<string> deposits = sections.Where(record => record.StartsWith("deposit"));
+                            string deposit;
+
+                            if (deposits != null && deposits.Count() != 0)
+                                deposit = deposits.First();
+                            else
+                                throw new Exception("No deposit data found!");
+
+                            ini.Set(deposit, "index", completedIndex + 1);
                             Drone.Program.Me.CustomData = ini.ToString();
                         }
 
@@ -201,6 +225,7 @@ namespace IngameScript
 
                         minerConfig.Set("miner", "mining_site", tunnel.StartingPoint.ToString());
                         minerConfig.Set("miner", "tunnel_end", tunnel.EndPoint.ToString());
+                        minerConfig.Set("miner", "index", tunnel.TunnelIndex);
                         miner.CustomData = minerConfig.ToString();
 
                         miner.TryRun("launch");

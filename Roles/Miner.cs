@@ -262,9 +262,11 @@ namespace IngameScript
                 if (!Vector3D.TryParse(rawValue, out TunnelEnd))
                     throw new Exception($"Unable to parse: {rawValue} as tunnel end");
 
+                int index;
+                if (!config.Get(Name(), "index").TryGetInt32(out index))
+                    throw new Exception("index is missing");
 
-
-                Tunnel = new Tunnel(Drone, MiningSite, TunnelEnd);
+                Tunnel = new Tunnel(Drone, MiningSite, TunnelEnd, index, ForemanAddress);
             }
 
             public override string Name()

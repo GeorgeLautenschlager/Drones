@@ -28,15 +28,17 @@ namespace IngameScript
 
             public Vector3D StartingPoint;
             public Vector3D EndPoint;
-            private int TunnelIndex;
+            public int TunnelIndex;
+            private long ParentAddress;
 
-            public Tunnel(Drone drone, Vector3D startingPoint, Vector3D endPoint)
+            public Tunnel(Drone drone, Vector3D startingPoint, Vector3D endPoint, int tunnelIndex, long parentAddress)
             {
-                this.Drone = drone;
-                this.State = 0;
-                this.StartingPoint = startingPoint;
-                this.EndPoint = endPoint;
-                this.TunnelIndex = 1;
+                Drone = drone;
+                State = 0;
+                StartingPoint = startingPoint;
+                EndPoint = endPoint;
+                TunnelIndex = tunnelIndex;
+                ParentAddress = parentAddress;
             }
 
             public Tunnel(MyIni asteroidCatalogue)
@@ -100,6 +102,7 @@ namespace IngameScript
                 // Starting from the "origin" move along the x axis 3 times the drone width and the y axis 3 times the drone width
                 StartingPoint = TopLeftCorner + (row * droneWidth * Vector3D.Normalize(xAxis)) + (column * droneWidth * Vector3D.Normalize(yAxis));
                 EndPoint = StartingPoint + depth * Vector3D.Normalize(DepositNormal);
+                TunnelIndex = index;
             }
 
             public bool Mine()
@@ -121,12 +124,11 @@ namespace IngameScript
                         break;
                     //Tunnel complete
                     case 1:
-                        //TODO: notify foreman that this tunnel was completed
+                        Drone.Program.IGC.SendUnicastMessage(ParentAddress, "tunnel_complete", TunnelIndex);
                         State = 3;
                         break;
                     //Unable to continue
                     case 2:
-                        //TODO: Keep this tunnel for later
                         State = 3;
                         break;
                     //Backing out

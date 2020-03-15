@@ -260,13 +260,10 @@ namespace IngameScript
         
             public bool FlyTo(Vector3D position, IMyTerminalBlock reference, bool align, double speedLimit = -1)
             {
-                LogToLcd($"{DateTime.Now}");
                 Vector3D translationVector = position - reference.GetPosition();
 
-                Log($"D: {translationVector.Length()}");
                 if(translationVector.Length() < 0.25)
                 {
-                    Log("Arrived at target, All Stop.");
                     AllStop();
                     return true;
                 }
